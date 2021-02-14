@@ -32,13 +32,13 @@ class DataProcessor:
         self.data_processing_method = args.data_processing_method
 
     def coswara_processor(self):
+        wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
-        for folder_with_date in tqdm(folders_with_date, total=len(folders_with_date)):
-            print(folder_with_date)
+        for folder_with_date in folders_with_date:
             folder_with_date += '/'
-            files = [x.split('/')[-1] for x in glob.glob(folder_with_date + '/*')]
-            preprocess_data(folder_with_date, files, self.normalize_while_creating,
-                            self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
+            wav_folders.extend(['/'.join(x.split('/')[-2:]) for x in glob.glob(folder_with_date + '/*')])
+        preprocess_data(self.coswara_datapath, wav_folders, self.normalize_while_creating,
+                        self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
 
         pass
 
