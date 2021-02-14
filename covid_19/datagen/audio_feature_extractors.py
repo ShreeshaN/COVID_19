@@ -207,7 +207,7 @@ def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_s
                     raise Exception(
                             'Specify a method to use for pre processing raw audio signal. Available options - {fbank, mfcc, gaf, raw}')
                 data[audio_file.split('/')[-1]].append(features)
-        pickle.dump(dict(data), open(filepath + '/fbank.pkl', 'wb'))
+        pickle.dump(dict(data), open(filepath + '/' + method + '.pkl', 'wb'))
     else:
         print('File not found ', filepath)
 
