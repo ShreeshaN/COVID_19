@@ -1,0 +1,12 @@
+{
+  "coswara_datapath":"",
+  "mit_datapath": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/diagnosis.csv",
+  "mit_audiopath": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
+  "data_processing_method": "fbank",
+  "normalise_while_creating": false,
+  "normalise_while_training": false,
+  "data_augment": false,
+  "sampling_rate": 44100,
+  "sample_size_in_seconds": 8,
+  "overlap": 1
+}
