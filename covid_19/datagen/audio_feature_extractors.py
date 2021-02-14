@@ -166,6 +166,9 @@ def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_s
     """
     data = defaultdict(list)
     filepath = base_path + file
+
+    if os.path.exists(filepath + '/' + method + '.pkl'):  # TEMP FIX
+        return
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
         for audio_file in filenames:

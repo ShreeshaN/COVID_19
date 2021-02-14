@@ -42,17 +42,12 @@ class DataProcessor:
         data[data.index.isin(train_index)].to_csv(self.mit_audiopath + '/train_data.csv')
         data[data.index.isin(test_index)].to_csv(self.mit_audiopath + '/test_data.csv')
         train_X, test_X, train_y, test_y = X[train_index], X[test_index], y[train_index], y[test_index]
-        # import librosa, glob
-        # for file in train_X:
-        #     print(file)
-        #     for audiofile in glob.glob(self.mit_audiopath + file + '/*.wav'):
-        #         _, _ = librosa.load(audiofile)
-        preprocess_data(self.mit_audiopath, train_X, train_y, self.normalize_while_creating,
+        preprocess_data(self.mit_audiopath, test_X, test_y, self.normalize_while_creating,
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
 
     def run(self):
-        self.mit_processor()
-        # self.coswara_processor()
+        # self.mit_processor()
+        self.coswara_processor()
 
 
 def parse():
