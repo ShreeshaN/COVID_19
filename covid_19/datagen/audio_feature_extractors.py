@@ -174,6 +174,8 @@ def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_s
             except Exception as e:
                 print(e)
                 continue
+            if librosa.get_duration(audio, sr=sampling_rate) < 1:
+                continue
             chunks = cut_audio(audio, sampling_rate=sampling_rate, sample_size_in_seconds=sample_size_in_seconds,
                                overlap=overlap)
             for chunk in chunks:
