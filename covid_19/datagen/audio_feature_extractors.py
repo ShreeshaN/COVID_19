@@ -152,11 +152,10 @@ def get_shimmer_jitter_from_opensmile(audio, index, sr):
     return data_needed
 
 
-def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method):
+def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method):
     """
     This method is called by the preprocess data method
     :param file:
-    :param label:
     :param base_path:
     :param sampling_rate:
     :param sample_size_in_seconds:
@@ -167,8 +166,6 @@ def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_s
     data = defaultdict(list)
     filepath = base_path + file
 
-    if os.path.exists(filepath + '/' + method + '.pkl'):  # TEMP FIX
-        return
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
         for audio_file in filenames:
@@ -215,11 +212,11 @@ def read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_s
         print('File not found ', filepath)
 
 
-def preprocess_data(base_path, files, labels, normalise, sample_size_in_seconds, sampling_rate, overlap, method):
+def preprocess_data(base_path, files, normalise, sample_size_in_seconds, sampling_rate, overlap, method):
     Parallel(n_jobs=8, backend='multiprocessing')(
-            delayed(read_audio_n_process)(file, label, base_path, sampling_rate, sample_size_in_seconds, overlap,
-                                          normalise, method) for file, label in
-            tqdm(zip(files, labels), total=len(labels)))
+            delayed(read_audio_n_process)(file, base_path, sampling_rate, sample_size_in_seconds, overlap,
+                                          normalise, method) for file in
+            tqdm(files, total=len(files)))
     # for file, label in tqdm(zip(files, labels), total=len(labels)):
     #     read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
 

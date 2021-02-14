@@ -12,6 +12,8 @@ Description:
 import json
 import argparse
 import pandas as pd
+import glob
+from tqdm import tqdm
 
 from covid_19.utils.data_utils import stratified_train_test_split
 from covid_19.utils.class_utils import AttributeDict
@@ -30,6 +32,14 @@ class DataProcessor:
         self.data_processing_method = args.data_processing_method
 
     def coswara_processor(self):
+        folders_with_date = glob.glob(self.coswara_datapath + '/*')[:2]
+        for folder_with_date in tqdm(folders_with_date, total=len(folders_with_date)):
+            print(folder_with_date)
+            folder_with_date += '/'
+            files = [x.split('/')[-1] for x in glob.glob(folder_with_date + '/*')]
+            preprocess_data(folder_with_date, files, self.normalize_while_creating,
+                            self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
+
         pass
 
     def mit_processor(self):
@@ -37,12 +47,12 @@ class DataProcessor:
         data = pd.read_csv(self.mit_datapath)[columns_to_consider]
         data = data.dropna()
         X, y = data['id'].values, data['diagnosis'].map({'Yes': 1, 'No': 0}).values
-        train_index, test_index = stratified_train_test_split(X, y, test_size=0.3,
-                                                              random_state=10)
-        data[data.index.isin(train_index)].to_csv(self.mit_audiopath + '/train_data.csv')
-        data[data.index.isin(test_index)].to_csv(self.mit_audiopath + '/test_data.csv')
-        train_X, test_X, train_y, test_y = X[train_index], X[test_index], y[train_index], y[test_index]
-        preprocess_data(self.mit_audiopath, test_X, test_y, self.normalize_while_creating,
+        # train_index, test_index = stratified_train_test_split(X, y, test_size=0.3,
+        #                                                       random_state=10)
+        # data[data.index.isin(train_index)].to_csv(self.mit_audiopath + '/train_data.csv')
+        # data[data.index.isin(test_index)].to_csv(self.mit_audiopath + '/test_data.csv')
+        # train_X, test_X, train_y, test_y = X[train_index], X[test_index], y[train_index], y[test_index]
+        preprocess_data(self.mit_audiopath, X, self.normalize_while_creating,
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
 
     def run(self):

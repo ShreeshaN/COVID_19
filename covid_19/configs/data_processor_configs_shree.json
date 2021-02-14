@@ -2,7 +2,7 @@
   "coswara_datapath":"/Users/badgod/badgod_documents/Datasets/covid19/coswara_data/Coswara-Data/Extracted_data/",
   "mit_datapath": "/Users/badgod/badgod_documents/Datasets/covid19/covid_mit_audio_data/diagnosis.csv",
   "mit_audiopath": "/Users/badgod/badgod_documents/Datasets/covid19/covid_mit_audio_data/",
-  "data_processing_method": "mfcc",
+  "data_processing_method": "fbank",
   "normalise_while_creating": false,
   "normalise_while_training": false,
   "data_augment": false,

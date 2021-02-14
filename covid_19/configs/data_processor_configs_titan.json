@@ -1,5 +1,5 @@
 {
-  "coswara_datapath":"",
+  "coswara_datapath":"/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/",
   "mit_datapath": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/diagnosis.csv",
   "mit_audiopath": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "data_processing_method": "mfcc",
