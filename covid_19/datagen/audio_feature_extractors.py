@@ -165,7 +165,6 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
     """
     data = defaultdict(list)
     filepath = base_path + file
-    print(filepath)
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
         for audio_file in filenames:
