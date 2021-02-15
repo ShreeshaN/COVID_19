@@ -36,7 +36,7 @@ class DataProcessor:
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
         for folder_with_date in folders_with_date:
-            wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date)])
+            wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if os.path.isdir(folder_with_date+'/'+x)])
         preprocess_data(self.coswara_datapath, wav_folders, self.normalize_while_creating,
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
 
