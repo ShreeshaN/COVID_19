@@ -48,7 +48,8 @@ class DataGather:
         test_data = pd.read_csv(self.mit_audiopath + 'test_data.csv')
         test_data = transform(test_data)
 
-        def process(folder_names, save_name, data_structure, audio_variation):
+        def process(data_dict, save_name, data_structure, audio_variation):
+            folder_names = data_dict.keys()
             for folder_name in tqdm(folder_names, total=len(folder_names)):
                 final_path = self.mit_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
@@ -58,7 +59,7 @@ class DataGather:
                         open(final_path, 'rb'))
                 if audio_variation in folder_data.keys():
                     data_structure[0].append(folder_data[audio_variation])
-                    data_structure[1].append(train_data[folder_name])
+                    data_structure[1].append(data_dict[folder_name])
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name)
                     continue
@@ -67,9 +68,9 @@ class DataGather:
         for variation in tqdm(self.mit_variations, total=len(self.mit_variations)):
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
-            process(train_data.keys(), 'mit_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(train_data, 'mit_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
             data = [[], []]
-            process(test_data.keys(), 'mit_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(test_data, 'mit_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
 
     def gather(self):
         self.mit_datagather()
