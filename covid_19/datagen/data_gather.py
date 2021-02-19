@@ -116,7 +116,7 @@ class DataGather:
             wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if
                                 os.path.isdir(folder_with_date + '/' + x)])
 
-        wav_folders = {x.split('/')[1]: x.split('/')[0] for x in wav_folders}
+        wav_folders = {x.split('/')[1]: x for x in wav_folders}
         for variation in tqdm(self.coswara_variations, total=len(self.coswara_variations)):
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
