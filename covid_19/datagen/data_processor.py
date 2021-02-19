@@ -36,11 +36,10 @@ class DataProcessor:
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
         for folder_with_date in folders_with_date:
-            wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if os.path.isdir(folder_with_date+'/'+x)])
+            wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if
+                                os.path.isdir(folder_with_date + '/' + x)])
         preprocess_data(self.coswara_datapath, wav_folders, self.normalize_while_creating,
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
-
-        pass
 
     def mit_processor(self):
         columns_to_consider = ['id', 'diagnosis']
@@ -49,8 +48,8 @@ class DataProcessor:
         X, y = data['id'].values, data['diagnosis'].map({'Yes': 1, 'No': 0}).values
         # train_index, test_index = stratified_train_test_split(X, y, test_size=0.3,
         #                                                       random_state=10)
-        # data[data.index.isin(train_index)].to_csv(self.mit_audiopath + '/train_data.csv')
-        # data[data.index.isin(test_index)].to_csv(self.mit_audiopath + '/test_data.csv')
+        # data[data.index.isin(train_index)].to_csv(self.mit_audiopath + '/train_data.csv',index=False)
+        # data[data.index.isin(test_index)].to_csv(self.mit_audiopath + '/test_data.csv',index=False)
         # train_X, test_X, train_y, test_y = X[train_index], X[test_index], y[train_index], y[test_index]
         preprocess_data(self.mit_audiopath, X, self.normalize_while_creating,
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
