@@ -50,7 +50,7 @@ class DataGather:
 
         def process(data_dict, save_name, data_structure, audio_variation):
             folder_names = data_dict.keys()
-            for folder_name in tqdm(folder_names, total=len(folder_names)):
+            for e, folder_name in tqdm(enumerate(folder_names), total=len(folder_names)):
                 final_path = self.mit_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
                     print(folder_name, 'does not exist')
@@ -61,7 +61,7 @@ class DataGather:
                     data_structure[0].append(folder_data[audio_variation])
                     data_structure[1].append(data_dict[folder_name])
                 else:
-                    print('Variation ', audio_variation, 'not present in ', folder_name)
+                    print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
                     continue
             pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
 
