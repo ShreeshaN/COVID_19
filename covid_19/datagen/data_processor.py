@@ -33,8 +33,30 @@ class DataProcessor:
         self.data_processing_method = args.data_processing_method
 
     def coswara_processor(self):
+        # Step 1 - Load combined data and split it into train, test csv files and save it
+        # Step 2 - Not connected with step 1 - Enter folders, read wav files and save MFCC and
+        #               filterbank representations as pickles
+        coswara_label_mappings = {"healthy": 0,
+                                  "resp_illness_not_identified": 0,
+                                  "no_resp_illness_exposed": 0,
+                                  "recovered_full": 0,
+                                  "positive_mild": 1,
+                                  "positive_asymp": 1,
+                                  "positive_moderate": 1
+                                  }
+
+        data = pd.read_csv(os.path.dirname(os.path.dirname(self.coswara_datapath)) + '/combined_data.csv')
+        data['merged_label'] = data['covid_status'].map(coswara_label_mappings)
+        train_index, test_index = stratified_train_test_split(data['id'].values, data['merged_label'].values,
+                                                              test_size=0.3,
+                                                              random_state=10)
+        required_labels = ['id', 'merged_label', 'covid_status']
+        data[data.index.isin(train_index)][required_labels].to_csv(self.coswara_datapath + '/train_data.csv',
+                                                                   index=False)
+        data[data.index.isin(test_index)][required_labels].to_csv(self.coswara_datapath + '/test_data.csv', index=False)
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
+        folders_with_date = [x for x in folders_with_date if os.path.isdir(x)]
         for folder_with_date in folders_with_date:
             wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if
                                 os.path.isdir(folder_with_date + '/' + x)])

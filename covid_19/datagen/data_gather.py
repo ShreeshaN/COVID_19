@@ -34,6 +34,7 @@ class DataGather:
         self.overlap = args.overlap
         self.data_processing_method = args.data_processing_method
         self.mit_variations = args.mit_variations
+        self.coswara_variations = args.coswara_variations
 
     def mit_datagather(self):
         def transform(df):
@@ -69,14 +70,65 @@ class DataGather:
         for variation in tqdm(self.mit_variations, total=len(self.mit_variations)):
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
-            process(train_data, 'mit_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(train_data,
+                    'mit_train_data_' + self.data_processing_method + '_' + variation.split('.')[0] + '.pkl',
+                    data, variation)
             data = [[], []]
-            process(test_data, 'mit_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(test_data, 'mit_test_data_' + self.data_processing_method + '_' + variation.split('.')[0] + '.pkl',
+                    data, variation)
+
+    def coswara_datagather(self):
+        def transform(df):
+            df = df[['id', 'merged_label']]
+            df.set_index('id', inplace=True)
+            dict_data = df.to_dict()
+            return dict_data['merged_label']
+
+        def process(data_dict, save_name, data_structure, audio_variation):
+            folder_names = data_dict.keys()
+            for e, folder_name in tqdm(enumerate(folder_names), total=len(folder_names)):
+                final_path = self.coswara_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
+                if not os.path.exists(final_path):
+                    print(folder_name, 'does not exist')
+                    continue
+                folder_data = pickle.load(
+                        open(final_path, 'rb'))
+                if audio_variation in folder_data.keys():
+                    for i in range(len(folder_data[audio_variation])):
+                        data_structure[0].append(folder_data[audio_variation][i])
+                        data_structure[1].append(data_dict[folder_name])
+                else:
+                    print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
+                    continue
+            pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
+
+        train_data = pd.read_csv(self.coswara_datapath + 'train_data.csv')
+        train_data = transform(train_data)
+
+        test_data = pd.read_csv(self.coswara_datapath + 'test_data.csv')
+        test_data = transform(test_data)
+
+        wav_folders = []
+        folders_with_date = glob.glob(self.coswara_datapath + '/*')
+        folders_with_date = [x for x in folders_with_date if os.path.isdir(x)]
+        for folder_with_date in folders_with_date:
+            wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if
+                                os.path.isdir(folder_with_date + '/' + x)])
+
+        wav_folders = {x.split('/')[1]: x.split('/')[0] for x in wav_folders}
+        for variation in tqdm(self.coswara_variations, total=len(self.coswara_variations)):
+            print('**************************** Starting', variation, '****************************')
+            data = [[], []]
+            process(train_data, 'coswara_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            data = [[], []]
+            process(test_data, 'coswara_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
+
+        pass
 
     def gather(self):
         self.mit_datagather()
 
-    #      self.coswara_datagather()
+        # self.coswara_datagather()
 
     def run(self):
         self.gather()
