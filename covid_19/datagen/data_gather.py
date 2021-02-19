@@ -87,6 +87,7 @@ class DataGather:
         def process(data_dict, save_name, data_structure, audio_variation):
             folder_names = data_dict.keys()
             for e, folder_name in tqdm(enumerate(folder_names), total=len(folder_names)):
+                folder_name = wav_folders[folder_name]
                 final_path = self.coswara_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
                     print(folder_name, 'does not exist')
@@ -100,7 +101,7 @@ class DataGather:
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
                     continue
-            pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
+            pickle.dump(data_structure, open(self.coswara_datapath + '/' + save_name, 'wb'))
 
         train_data = pd.read_csv(self.coswara_datapath + 'train_data.csv')
         train_data = transform(train_data)
@@ -119,17 +120,20 @@ class DataGather:
         for variation in tqdm(self.coswara_variations, total=len(self.coswara_variations)):
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
-            process(train_data, 'coswara_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(train_data,
+                    'coswara_train_data_' + self.data_processing_method + '_' + variation.split('.')[0] + '.pkl', data,
+                    variation)
             data = [[], []]
-            process(test_data, 'coswara_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
+            process(test_data,
+                    'coswara_test_data_' + self.data_processing_method + '_' + variation.split('.')[0] + '.pkl', data,
+                    variation)
 
         pass
 
     def gather(self):
-        self.mit_datagather()
+        # self.mit_datagather()
 
-        # self.coswara_datagather()
-
+        self.coswara_datagather()
 
     def run(self):
         self.gather()
