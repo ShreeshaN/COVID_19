@@ -88,7 +88,7 @@ class DataGather:
             folder_names = data_dict.keys()
             for e, folder_name in tqdm(enumerate(folder_names), total=len(folder_names)):
                 folder_name = wav_folders[folder_name]
-                final_path = self.coswara_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
+                final_path = self.coswara_datapath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
                     print(folder_name, 'does not exist')
                     continue
