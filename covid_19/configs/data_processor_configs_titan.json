@@ -11,6 +11,17 @@
     "oooo.wav",
     "story.wav"
   ],
+  "coswara_variations": [
+    "breathing-deep.wav",
+    "breathing-shallow.wav",
+    "cough-heavy.wav",
+    "cough-shallow.wav",
+    "counting-fast.wav",
+    "counting-normal.wav",
+    "vowel-a.wav",
+    "vowel-e.wav",
+    "vowel-o.wav"
+  ],
   "data_processing_method": "mfcc",
   "normalise_while_creating": false,
   "normalise_while_training": false,
