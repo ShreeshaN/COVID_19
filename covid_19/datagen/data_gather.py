@@ -80,6 +80,7 @@ class DataGather:
     def coswara_datagather(self):
         def transform(df):
             df = df[['id', 'merged_label']]
+            df['id'] = df['id'].map(wav_folders)
             df.set_index('id', inplace=True)
             dict_data = df.to_dict()
             return dict_data['merged_label']
@@ -87,7 +88,7 @@ class DataGather:
         def process(data_dict, save_name, data_structure, audio_variation):
             folder_names = data_dict.keys()
             for e, folder_name in tqdm(enumerate(folder_names), total=len(folder_names)):
-                folder_name = wav_folders[folder_name]
+                # folder_name = wav_folders[folder_name]
                 final_path = self.coswara_datapath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
                     print(folder_name, 'does not exist')
@@ -103,12 +104,6 @@ class DataGather:
                     continue
             pickle.dump(data_structure, open(self.coswara_datapath + '/' + save_name, 'wb'))
 
-        train_data = pd.read_csv(self.coswara_datapath + 'train_data.csv')
-        train_data = transform(train_data)
-
-        test_data = pd.read_csv(self.coswara_datapath + 'test_data.csv')
-        test_data = transform(test_data)
-
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
         folders_with_date = [x for x in folders_with_date if os.path.isdir(x)]
@@ -117,6 +112,13 @@ class DataGather:
                                 os.path.isdir(folder_with_date + '/' + x)])
 
         wav_folders = {x.split('/')[1]: x for x in wav_folders}
+
+        train_data = pd.read_csv(self.coswara_datapath + 'train_data.csv')
+        train_data = transform(train_data)
+
+        test_data = pd.read_csv(self.coswara_datapath + 'test_data.csv')
+        test_data = transform(test_data)
+
         for variation in tqdm(self.coswara_variations, total=len(self.coswara_variations)):
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
