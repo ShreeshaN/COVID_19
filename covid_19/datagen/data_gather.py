@@ -37,7 +37,7 @@ class DataGather:
 
     def mit_datagather(self):
         def transform(df):
-            df = df['diagnosis'].map({'Yes': 1, 'No': 0})
+            df['diagnosis'] = df['diagnosis'].map({'Yes': 1, 'No': 0})
             df.set_index('id', inplace=True)
             dict_data = df.to_dict()
             return dict_data['diagnosis']
