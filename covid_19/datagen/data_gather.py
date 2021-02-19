@@ -36,16 +36,16 @@ class DataGather:
         self.mit_variations = args.mit_variations
 
     def mit_datagather(self):
-        train_data = pd.read_csv(self.mit_datapath + 'train.csv')
+        train_data = pd.read_csv(self.mit_audiopath + 'train.csv')
         train_data.set_index('id', inplace=True)
         train_data = train_data.to_dict()
-        test_data = pd.read_csv(self.mit_datapath + 'test.csv')
+        test_data = pd.read_csv(self.mit_audiopath + 'test.csv')
         test_data.set_index('id', inplace=True)
         test_data = test_data.to_dict()
 
         def process(folder_names, save_name, data_structure, audio_variation):
             for folder_name in tqdm(folder_names, total=len(folder_names)):
-                final_path = self.mit_datapath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
+                final_path = self.mit_audiopath + '/' + folder_name + '/' + self.data_processing_method + '.pkl'
                 if not os.path.exists(final_path):
                     print(folder_name, 'does not exist')
                     continue
@@ -57,7 +57,7 @@ class DataGather:
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name)
                     continue
-            pickle.dump(data_structure, open(self.mit_datapath + '/' + save_name, 'wb'))
+            pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
 
         for variation in tqdm(self.mit_variations, total=len(self.mit_variations)):
             data = [[], []]
