@@ -58,8 +58,9 @@ class DataGather:
                 folder_data = pickle.load(
                         open(final_path, 'rb'))
                 if audio_variation in folder_data.keys():
-                    data_structure[0].append(folder_data[audio_variation])
-                    data_structure[1].append(data_dict[folder_name])
+                    for i in range(len(folder_data[audio_variation])):
+                        data_structure[0].append(folder_data[audio_variation][i])
+                        data_structure[1].append(data_dict[folder_name])
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
                     continue
