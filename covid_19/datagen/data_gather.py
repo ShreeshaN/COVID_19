@@ -68,7 +68,7 @@ class DataGather:
             print('**************************** Starting', variation, '****************************')
             data = [[], []]
             process(train_data.keys(), 'mit_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
-            data.clear()
+            data = [[], []]
             process(test_data.keys(), 'mit_test_data_' + variation.split('.')[0] + '.pkl', data, variation)
 
     def gather(self):
