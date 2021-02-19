@@ -36,10 +36,10 @@ class DataGather:
         self.mit_variations = args.mit_variations
 
     def mit_datagather(self):
-        train_data = pd.read_csv(self.mit_audiopath + 'train.csv')
+        train_data = pd.read_csv(self.mit_audiopath + 'train_data.csv')
         train_data.set_index('id', inplace=True)
         train_data = train_data.to_dict()
-        test_data = pd.read_csv(self.mit_audiopath + 'test.csv')
+        test_data = pd.read_csv(self.mit_audiopath + 'test_data.csv')
         test_data.set_index('id', inplace=True)
         test_data = test_data.to_dict()
 
