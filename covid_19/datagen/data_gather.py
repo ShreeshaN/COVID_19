@@ -36,12 +36,17 @@ class DataGather:
         self.mit_variations = args.mit_variations
 
     def mit_datagather(self):
+        def transform(df):
+            df = df['diagnosis'].map({'Yes': 1, 'No': 0})
+            df.set_index('id', inplace=True)
+            dict_data = df.to_dict()
+            return dict_data['diagnosis']
+
         train_data = pd.read_csv(self.mit_audiopath + 'train_data.csv')
-        train_data.set_index('id', inplace=True)
-        train_data = train_data.to_dict()
+        train_data = transform(train_data)
+
         test_data = pd.read_csv(self.mit_audiopath + 'test_data.csv')
-        test_data.set_index('id', inplace=True)
-        test_data = test_data.to_dict()
+        test_data = transform(test_data)
 
         def process(folder_names, save_name, data_structure, audio_variation):
             for folder_name in tqdm(folder_names, total=len(folder_names)):
@@ -60,6 +65,7 @@ class DataGather:
             pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
 
         for variation in tqdm(self.mit_variations, total=len(self.mit_variations)):
+            print('**************************** Starting', variation, '****************************')
             data = [[], []]
             process(train_data.keys(), 'mit_train_data_' + variation.split('.')[0] + '.pkl', data, variation)
             data.clear()
@@ -67,7 +73,8 @@ class DataGather:
 
     def gather(self):
         self.mit_datagather()
-        self.coswara_datagather()
+
+    #      self.coswara_datagather()
 
     def run(self):
         self.gather()
