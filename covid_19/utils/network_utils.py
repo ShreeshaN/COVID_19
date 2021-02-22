@@ -42,7 +42,7 @@ def accuracy_fn(preds, labels, threshold):
                                                                average='binary')
     accuracy = torch.sum(predictions == labels) / float(len(labels))
     uar = recall_score(to_numpy(labels), to_numpy(predictions), average='macro')
-    false_positive_rate, true_positive_rate, thresholds = roc_curve(labels, preds)
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(labels, to_numpy(preds))
     auc_score = auc(false_positive_rate, true_positive_rate)
     return accuracy, uar, precision, recall, f1, auc_score
 
