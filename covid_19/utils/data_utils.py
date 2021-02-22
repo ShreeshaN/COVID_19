@@ -14,6 +14,7 @@ import pandas as pd
 import random
 import h5py
 import numpy as np
+import pickle
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
@@ -63,8 +64,13 @@ def save_npy(data, filename):
 
 
 def read_npy(filename):
-    print("Reading data from file ", filename)
+    print("Reading numpy data from file ", filename)
     return np.load(filename, allow_pickle=True)
+
+
+def read_pkl(filename):
+    print("Reading pickle data from file ", filename)
+    return pickle.load(open(filename, 'rb'))
 
 
 def save_csv(data, columns, filename):

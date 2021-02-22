@@ -14,7 +14,7 @@ import os
 
 import numpy as np
 import torch
-from sklearn.metrics import recall_score, precision_recall_fscore_support
+from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
 from torch import tensor
 
 
@@ -42,13 +42,18 @@ def accuracy_fn(preds, labels, threshold):
                                                                average='binary')
     accuracy = torch.sum(predictions == labels) / float(len(labels))
     uar = recall_score(to_numpy(labels), to_numpy(predictions), average='macro')
-    return accuracy, uar, precision, recall, f1
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(labels, preds)
+    auc_score = auc(false_positive_rate, true_positive_rate)
+    return accuracy, uar, precision, recall, f1, auc_score
 
 
-def log_summary(writer, global_step, accuracy, loss, uar, lr, type):
+def log_summary(writer, global_step, accuracy, loss, uar, precision, recall, auc, lr, type):
     writer.add_scalar(f'{type}/Accuracy', accuracy, global_step)
     writer.add_scalar(f'{type}/Loss', loss, global_step)
     writer.add_scalar(f'{type}/UAR', uar, global_step)
+    writer.add_scalar(f'{type}/Precision', precision, global_step)
+    writer.add_scalar(f'{type}/Recall', recall, global_step)
+    writer.add_scalar(f'{type}/AUC', auc, global_step)
     writer.add_scalar(f'{type}/LR', lr, global_step)
     writer.flush()
 

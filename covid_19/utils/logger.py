@@ -24,6 +24,7 @@ class Logger(metaclass=Singleton):
         self.console_handler = logging.StreamHandler()
         self.formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         self.console_handler.setFormatter(self.formatter)
+        self.console_handler.setLevel('INFO')
         self.logger.addHandler(self.console_handler)
         self.logger.setLevel(logging.INFO)
 
