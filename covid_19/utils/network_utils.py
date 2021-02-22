@@ -36,13 +36,12 @@ def to_numpy(x):
 
 def accuracy_fn(preds, labels, threshold):
     # todo: Remove F1, Precision, Recall from return , or change all caller method dynamics
-
     predictions = torch.where(preds > to_tensor(threshold), to_tensor(1), to_tensor(0))
     precision, recall, f1, _ = precision_recall_fscore_support(to_numpy(labels), to_numpy(predictions),
                                                                average='binary')
     accuracy = torch.sum(predictions == labels) / float(len(labels))
     uar = recall_score(to_numpy(labels), to_numpy(predictions), average='macro')
-    false_positive_rate, true_positive_rate, thresholds = roc_curve(labels, to_numpy(preds))
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(to_numpy(labels), to_numpy(preds))
     auc_score = auc(false_positive_rate, true_positive_rate)
     return accuracy, uar, precision, recall, f1, auc_score
 
