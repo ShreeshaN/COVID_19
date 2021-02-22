@@ -100,7 +100,7 @@ class ConvNetRunner:
         input_data, labels = [], []
 
         def split_data(combined_data):
-            return combined_data[0][:20], combined_data[1][:20]
+            return combined_data[0], combined_data[1]
 
         if infer:
             pass
@@ -187,7 +187,7 @@ class ConvNetRunner:
 
                 if i % self.display_interval == 0:
                     self.logger.info(
-                            f"Epoch: {epoch}/{self.epochs} | Step: {i}/{total_step} | Loss: {'%.3f' % loss} | Accuracy: {'%.3f' % accuracy} | UAR: {'%.3f' % uar}| F1:{'%.3f' % f1} | Precision: {'%.3f' % precision} | Recall: {'%.3f' % recall} | AUC: {'%.3f' % auc}")
+                            f"Epoch: {epoch}/{self.epochs} | Step: {i}/{total_step} | Loss: {'%.5f' % loss} | Accuracy: {'%.5f' % accuracy} | UAR: {'%.5f' % uar}| F1:{'%.5f' % f1} | Precision: {'%.5f' % precision} | Recall: {'%.5f' % recall} | AUC: {'%.5f' % auc}")
 
             log_learnable_parameter(self.writer, epoch, to_tensor(train_logits, device=self.device),
                                     name='train_logits')
@@ -204,7 +204,7 @@ class ConvNetRunner:
                         type='Train')
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
-                    f"Loss: {'%.3f' % np.mean(self.batch_loss)} | Accuracy: {'%.3f' % np.mean(self.batch_accuracy)} | UAR: {'%.3f' % np.mean(self.batch_uar)} | F1:{'%.3f' % np.mean(self.batch_f1)} | Precision:{'%.3f' % np.mean(self.batch_precision)} | Recall:{'%.3f' % np.mean(self.batch_recall)} | AUC:{'%.3f' % np.mean(self.batch_auc)}")
+                    f"Loss: {'%.5f' % np.mean(self.batch_loss)} | Accuracy: {'%.5f' % np.mean(self.batch_accuracy)} | UAR: {'%.5f' % np.mean(self.batch_uar)} | F1:{'%.5f' % np.mean(self.batch_f1)} | Precision:{'%.5f' % np.mean(self.batch_precision)} | Recall:{'%.5f' % np.mean(self.batch_recall)} | AUC:{'%.5f' % np.mean(self.batch_auc)}")
             self.logger.info(f"Learning rate {self.optimiser.state_dict()['param_groups'][0]['lr']}")
 
             # test data
@@ -254,10 +254,10 @@ class ConvNetRunner:
         predictions = [element for sublist in predictions for element in sublist]
         self.logger.info(f'***** {type} Metrics ***** ')
         self.logger.info(
-                f"Loss: {'%.3f' % np.mean(self.test_batch_loss)} | Accuracy: {'%.3f' % np.mean(self.test_batch_accuracy)} "
-                f"| UAR: {'%.3f' % np.mean(self.test_batch_uar)}| F1:{'%.3f' % np.mean(self.test_batch_f1)} "
-                f"| Precision:{'%.3f' % np.mean(self.test_batch_precision)} "
-                f"| Recall:{'%.3f' % np.mean(self.test_batch_recall)} | AUC:{'%.3f' % np.mean(self.test_batch_auc)}")
+                f"Loss: {'%.5f' % np.mean(self.test_batch_loss)} | Accuracy: {'%.5f' % np.mean(self.test_batch_accuracy)} "
+                f"| UAR: {'%.5f' % np.mean(self.test_batch_uar)}| F1:{'%.5f' % np.mean(self.test_batch_f1)} "
+                f"| Precision:{'%.5f' % np.mean(self.test_batch_precision)} "
+                f"| Recall:{'%.5f' % np.mean(self.test_batch_recall)} | AUC:{'%.5f' % np.mean(self.test_batch_auc)}")
 
         log_summary(self.writer, epoch, accuracy=np.mean(self.test_batch_accuracy),
                     loss=np.mean(self.test_batch_loss),
