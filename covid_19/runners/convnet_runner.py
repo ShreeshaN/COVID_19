@@ -186,8 +186,6 @@ class ConvNetRunner:
                 self.batch_auc.append(auc)
 
                 if i % self.display_interval == 0:
-                    print('here epoch ', 1)
-                    self.logger.info('here epoch ' + str(1))
                     self.logger.info(
                             f"Epoch: {epoch}/{self.epochs} | Step: {i}/{total_step} | Loss: {'%.3f' % loss} | Accuracy: {'%.3f' % accuracy} | UAR: {'%.3f' % uar}| F1:{'%.3f' % f1} | Precision: {'%.3f' % precision} | Recall: {'%.3f' % recall} | AUC: {'%.3f' % auc}")
 

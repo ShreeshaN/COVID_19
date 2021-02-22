@@ -1,6 +1,6 @@
 {
   "run_name": "covid19_convnet",
-  "epochs": 5,
+  "epochs": 25,
   "batch_size": 32,
   "learning_rate": 0.001,
   "learning_rate_decay": 0.95,
@@ -12,7 +12,7 @@
   "normalise_while_training": true,
   "num_classes": 1,
   "network_save_interval": 5,
-  "display_interval": 1,
+  "display_interval": 2,
   "dropout": 0.2,
   "data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "data_processing_method": "fbank",
