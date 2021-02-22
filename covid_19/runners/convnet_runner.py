@@ -200,8 +200,9 @@ class ConvNetRunner:
             # self.scheduler.step(epoch=epoch)
             log_summary(self.writer, epoch, accuracy=np.mean(self.batch_accuracy),
                         loss=np.mean(self.batch_loss),
-                        uar=np.mean(self.batch_uar), precision=self.batch_precision, recall=self.batch_recall,
-                        auc=self.batch_auc, lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
+                        uar=np.mean(self.batch_uar), precision=np.mean(self.batch_precision),
+                        recall=np.mean(self.batch_recall),
+                        auc=np.mean(self.batch_auc), lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
                         type='Train')
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
