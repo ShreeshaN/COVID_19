@@ -17,5 +17,6 @@
   "data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
-  "use_gpu": false
+  "use_gpu": false,
+  "data_source": "coswara"
 }

@@ -17,5 +17,6 @@
   "data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
   "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
-  "use_gpu": false
+  "use_gpu": false,
+  "data_source": "coswara"
 }
