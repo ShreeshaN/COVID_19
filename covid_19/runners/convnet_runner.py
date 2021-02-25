@@ -45,7 +45,12 @@ class ConvNetRunner:
         self.train_net = args.train_net
         self.batch_size = args.batch_size
         self.num_classes = args.num_classes
-        self.data_read_path = args.data_save_path
+        if args.data_source == 'mit':
+            self.data_read_path = args.mit_data_save_path
+        elif args.data_source == 'coswara':
+            self.data_read_path = args.coswara_data_save_path
+        else:  # Keep coswara as default for now
+            self.data_read_path = args.coswara_data_save_path
         self.is_cuda_available = torch.cuda.is_available()
         self.display_interval = args.display_interval
         self.logger = None
