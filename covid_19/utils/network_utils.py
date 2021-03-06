@@ -16,6 +16,7 @@ import numpy as np
 import torch
 from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
 from torch import tensor
+import math
 
 
 def to_tensor(x, device=None):
@@ -36,14 +37,26 @@ def to_numpy(x):
 
 def accuracy_fn(preds, labels, threshold):
     # todo: Remove F1, Precision, Recall from return , or change all caller method dynamics
+
+    metrics = dict()
     predictions = torch.where(preds > to_tensor(threshold), to_tensor(1), to_tensor(0))
     precision, recall, f1, _ = precision_recall_fscore_support(to_numpy(labels), to_numpy(predictions),
                                                                average='binary')
+    metrics['precision'] = precision
+    metrics['recall'] = recall
+    metrics['f1'] = f1
+
     accuracy = torch.sum(predictions == labels) / float(len(labels))
+    metrics['accuracy'] = accuracy
+
     uar = recall_score(to_numpy(labels), to_numpy(predictions), average='macro')
+    metrics['uar'] = uar
+
     false_positive_rate, true_positive_rate, thresholds = roc_curve(to_numpy(labels), to_numpy(preds))
     auc_score = auc(false_positive_rate, true_positive_rate)
-    return accuracy, uar, precision, recall, f1, auc_score
+    metrics['auc'] = 0 if math.isnan(auc_score) else auc_score
+
+    return metrics
 
 
 def log_summary(writer, global_step, accuracy, loss, uar, precision, recall, auc, lr, type):

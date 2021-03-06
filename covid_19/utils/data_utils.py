@@ -43,7 +43,6 @@ def stratified_train_test_split(X, y, test_size=None, train_size=None, random_st
 
 
 def read_h5py(filename, dataset_name='data'):
-    print("Reading data from file ", filename)
     h5f = h5py.File(filename, 'r')
     data = np.array(h5f[dataset_name])
     h5f.close()
@@ -52,29 +51,24 @@ def read_h5py(filename, dataset_name='data'):
 
 
 def save_h5py(data, filename, dataset_name='data'):
-    print('Saving data in ', filename)
     h5f = h5py.File(filename, 'w')
     h5f.create_dataset(dataset_name, data=data)
     h5f.close()
 
 
 def save_npy(data, filename):
-    print('Saving data in ', filename)
     np.save(filename, data)
 
 
 def read_npy(filename):
-    print("Reading numpy data from file ", filename)
     return np.load(filename, allow_pickle=True)
 
 
 def read_pkl(filename):
-    print("Reading pickle data from file ", filename)
     return pickle.load(open(filename, 'rb'))
 
 
 def save_csv(data, columns, filename):
-    print('Saving CSV file in ', filename)
     df = pd.DataFrame(data, columns=columns)
     df.to_csv(filename, index=False)
 

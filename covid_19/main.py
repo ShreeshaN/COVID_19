@@ -28,68 +28,89 @@ def parse():
     return args
 
 
+def extract_and_add_keys_from_filename(filename, args):
+    data_source = filename.split("_")[0]
+    data_processing_method = filename.split("_")[3]
+    data_variant = filename.split("_")[-1]
+    args['data_processing_method'] = data_processing_method
+    args['data_variant'] = data_variant
+    args['data_source'] = data_source
+
+
 def run(args):
-    mit_train_data_files, mit_test_data_files = ["mit_train_data_fbank_aaaa.pkl", "mit_train_data_fbank_alphabet.pkl",
-                                                 "mit_train_data_fbank_cough.pkl", "mit_train_data_fbank_count.pkl",
-                                                 "mit_train_data_fbank_eeee.pkl", "mit_train_data_fbank_oooo.pkl",
-                                                 "mit_train_data_fbank_story.pkl", "mit_train_data_mfcc_aaaa.pkl",
-                                                 "mit_train_data_mfcc_alphabet.pkl", "mit_train_data_mfcc_cough.pkl",
-                                                 "mit_train_data_mfcc_count.pkl", "mit_train_data_mfcc_eeee.pkl",
-                                                 "mit_train_data_mfcc_oooo.pkl", "mit_train_data_mfcc_story.pkl"], [
-                                                    "mit_test_data_fbank_aaaa.pkl", "mit_test_data_fbank_alphabet.pkl",
-                                                    "mit_test_data_fbank_cough.pkl",
-                                                    "mit_test_data_fbank_count.pkl", "mit_test_data_fbank_eeee.pkl",
-                                                    "mit_test_data_fbank_oooo.pkl",
-                                                    "mit_test_data_fbank_story.pkl", "mit_test_data_mfcc_aaaa.pkl",
-                                                    "mit_test_data_mfcc_alphabet.pkl",
-                                                    "mit_test_data_mfcc_cough.pkl", "mit_test_data_mfcc_count.pkl",
-                                                    "mit_test_data_mfcc_eeee.pkl",
-                                                    "mit_test_data_mfcc_oooo.pkl", "mit_test_data_mfcc_story.pkl"]
+    # MIT
+    train_data_files, test_data_files = ["mit_train_data_fbank_aaaa.pkl", "mit_train_data_fbank_alphabet.pkl",
+                                         "mit_train_data_fbank_cough.pkl", "mit_train_data_fbank_count.pkl",
+                                         "mit_train_data_fbank_eeee.pkl", "mit_train_data_fbank_oooo.pkl",
+                                         "mit_train_data_fbank_story.pkl", "mit_train_data_mfcc_aaaa.pkl",
+                                         "mit_train_data_mfcc_alphabet.pkl", "mit_train_data_mfcc_cough.pkl",
+                                         "mit_train_data_mfcc_count.pkl", "mit_train_data_mfcc_eeee.pkl",
+                                         "mit_train_data_mfcc_oooo.pkl", "mit_train_data_mfcc_story.pkl"], [
+                                            "mit_test_data_fbank_aaaa.pkl", "mit_test_data_fbank_alphabet.pkl",
+                                            "mit_test_data_fbank_cough.pkl",
+                                            "mit_test_data_fbank_count.pkl", "mit_test_data_fbank_eeee.pkl",
+                                            "mit_test_data_fbank_oooo.pkl",
+                                            "mit_test_data_fbank_story.pkl", "mit_test_data_mfcc_aaaa.pkl",
+                                            "mit_test_data_mfcc_alphabet.pkl",
+                                            "mit_test_data_mfcc_cough.pkl", "mit_test_data_mfcc_count.pkl",
+                                            "mit_test_data_mfcc_eeee.pkl",
+                                            "mit_test_data_mfcc_oooo.pkl", "mit_test_data_mfcc_story.pkl"]
 
-    coswara_train_data_files, coswara_test_data_files = ["coswara_train_data_fbank_counting-normal.pkl",
-                                                         "coswara_train_data_fbank_vowel-a.pkl",
-                                                         "coswara_train_data_fbank_vowel-e.pkl",
-                                                         "coswara_train_data_fbank_vowel-o.pkl",
-                                                         "coswara_train_data_mfcc_breathing-deep.pkl",
-                                                         "coswara_train_data_mfcc_breathing-shallow.pkl",
-                                                         "coswara_train_data_mfcc_cough-heavy.pkl",
-                                                         "coswara_train_data_mfcc_cough-shallow.pkl",
-                                                         "coswara_train_data_mfcc_counting-fast.pkl",
-                                                         "coswara_train_data_mfcc_counting-normal.pkl",
-                                                         "coswara_train_data_mfcc_vowel-a.pkl",
-                                                         "coswara_train_data_mfcc_vowel-e.pkl",
-                                                         "coswara_train_data_mfcc_vowel-o.pkl",
-                                                         "coswara_train_data_fbank_breathing-deep.pkl",
-                                                         "coswara_train_data_fbank_breathing-shallow.pkl",
-                                                         "coswara_train_data_fbank_cough-heavy.pkl",
-                                                         "coswara_train_data_fbank_cough-shallow.pkl",
-                                                         "coswara_train_data_fbank_counting-fast.pkl"], [
-                                                            "coswara_test_data_fbank_counting-normal.pkl",
-                                                            "coswara_test_data_fbank_vowel-a.pkl",
-                                                            "coswara_test_data_fbank_vowel-e.pkl",
-                                                            "coswara_test_data_fbank_vowel-o.pkl",
-                                                            "coswara_test_data_mfcc_breathing-deep.pkl",
-                                                            "coswara_test_data_mfcc_breathing-shallow.pkl",
-                                                            "coswara_test_data_mfcc_cough-heavy.pkl",
-                                                            "coswara_test_data_mfcc_cough-shallow.pkl",
-                                                            "coswara_test_data_mfcc_counting-fast.pkl",
-                                                            "coswara_test_data_mfcc_counting-normal.pkl",
-                                                            "coswara_test_data_mfcc_vowel-a.pkl",
-                                                            "coswara_test_data_mfcc_vowel-e.pkl",
-                                                            "coswara_test_data_mfcc_vowel-o.pkl",
-                                                            "coswara_test_data_fbank_breathing-deep.pkl",
-                                                            "coswara_test_data_fbank_breathing-shallow.pkl",
-                                                            "coswara_test_data_fbank_cough-heavy.pkl",
-                                                            "coswara_test_data_fbank_cough-shallow.pkl",
-                                                            "coswara_test_data_fbank_counting-fast.pkl"]
+    # COSWARA
+    # train_data_files, test_data_files = ["coswara_train_data_fbank_counting-normal.pkl",
+    #                                      "coswara_train_data_fbank_vowel-a.pkl",
+    #                                      "coswara_train_data_fbank_vowel-e.pkl",
+    #                                      "coswara_train_data_fbank_vowel-o.pkl",
+    #                                      "coswara_train_data_mfcc_breathing-deep.pkl",
+    #                                      "coswara_train_data_mfcc_breathing-shallow.pkl",
+    #                                      "coswara_train_data_mfcc_cough-heavy.pkl",
+    #                                      "coswara_train_data_mfcc_cough-shallow.pkl",
+    #                                      "coswara_train_data_mfcc_counting-fast.pkl",
+    #                                      "coswara_train_data_mfcc_counting-normal.pkl",
+    #                                      "coswara_train_data_mfcc_vowel-a.pkl",
+    #                                      "coswara_train_data_mfcc_vowel-e.pkl",
+    #                                      "coswara_train_data_mfcc_vowel-o.pkl",
+    #                                      "coswara_train_data_fbank_breathing-deep.pkl",
+    #                                      "coswara_train_data_fbank_breathing-shallow.pkl",
+    #                                      "coswara_train_data_fbank_cough-heavy.pkl",
+    #                                      "coswara_train_data_fbank_cough-shallow.pkl",
+    #                                      "coswara_train_data_fbank_counting-fast.pkl"], [
+    #                                         "coswara_test_data_fbank_counting-normal.pkl",
+    #                                         "coswara_test_data_fbank_vowel-a.pkl",
+    #                                         "coswara_test_data_fbank_vowel-e.pkl",
+    #                                         "coswara_test_data_fbank_vowel-o.pkl",
+    #                                         "coswara_test_data_mfcc_breathing-deep.pkl",
+    #                                         "coswara_test_data_mfcc_breathing-shallow.pkl",
+    #                                         "coswara_test_data_mfcc_cough-heavy.pkl",
+    #                                         "coswara_test_data_mfcc_cough-shallow.pkl",
+    #                                         "coswara_test_data_mfcc_counting-fast.pkl",
+    #                                         "coswara_test_data_mfcc_counting-normal.pkl",
+    #                                         "coswara_test_data_mfcc_vowel-a.pkl",
+    #                                         "coswara_test_data_mfcc_vowel-e.pkl",
+    #                                         "coswara_test_data_mfcc_vowel-o.pkl",
+    #                                         "coswara_test_data_fbank_breathing-deep.pkl",
+    #                                         "coswara_test_data_fbank_breathing-shallow.pkl",
+    #                                         "coswara_test_data_fbank_cough-heavy.pkl",
+    #                                         "coswara_test_data_fbank_cough-shallow.pkl",
+    #                                         "coswara_test_data_fbank_counting-fast.pkl"]
 
-    if args.data_source == 'mit':
-        train_data_files, test_data_files = mit_train_data_files, mit_test_data_files
-    elif args.data_source == 'coswara':
-        train_data_files, test_data_files = coswara_train_data_files, coswara_test_data_files
-    else:  # By default use coswara
-        train_data_files, test_data_files = coswara_train_data_files, coswara_test_data_files
+    # train_data_files = ["mit_train_data_fbank_breathing.pkl", "mit_train_data_fbank_cough.pkl",
+    #                     "mit_train_data_fbank_count.pkl", "mit_train_data_mfcc_breathing.pkl",
+    #                     "mit_train_data_mfcc_cough.pkl",
+    #                     "mit_train_data_mfcc_count.pkl"]
+    #
+    # test_data_files = ["mit_test_data_fbank_breathing.pkl", "mit_test_data_fbank_cough.pkl",
+    #                    "mit_test_data_fbank_count.pkl", "mit_test_data_mfcc_breathing.pkl",
+    #                    "mit_test_data_mfcc_cough.pkl",
+    #                    "mit_test_data_mfcc_count.pkl"]
+
     for train_file, test_file in zip(train_data_files, test_data_files):
+        # Process file name and extract keys
+        # 1. Extract runtime data source
+        # 2. Extract data processing method
+        # 3. Extract data variant
+        # 4. add all these to args
+        extract_and_add_keys_from_filename(train_file, args)
         if args.network == 'convnet':
             from covid_19.runners.convnet_runner import ConvNetRunner
             network = ConvNetRunner(args=args, train_file=train_file, test_file=test_file)

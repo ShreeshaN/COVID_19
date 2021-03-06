@@ -9,7 +9,6 @@ Description:
 ..todo::
 
 """
-
 import json
 import random
 import time
@@ -18,7 +17,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 
 from covid_19.networks.convnet import ConvNet
 from covid_19.utils import file_utils
@@ -26,6 +24,8 @@ from covid_19.utils.data_utils import read_pkl
 from covid_19.utils.logger import Logger
 from covid_19.utils.network_utils import accuracy_fn, log_summary, custom_confusion_matrix, \
     log_conf_matrix, write_to_npy, to_tensor, to_numpy, log_learnable_parameter
+
+import wandb as wnb
 
 # setting seed
 torch.manual_seed(1234)
@@ -82,10 +82,13 @@ class ConvNetRunner:
         self._min, self._max = float('inf'), -float('inf')
 
         if self.train_net:
+            wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
+                     entity="shreeshanwnb", reinit=True)
+            wnb.watch(self.network, log='all', log_freq=2)
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
             self.logger.info("********* DATA FILE: " + train_file + " *********")
-            self.logger.info(str(json.dumps(args, indent=4)))
+            self.logger.info(str(id(self.logger)))
         if self.test_net:
             self.logger.info('Loading Network')
             self.network.load_state_dict(torch.load(self.network_restore_path, map_location=self.device))
@@ -97,7 +100,6 @@ class ConvNetRunner:
         self.logger.info(f"Network Architecture:\n,{self.network}")
 
         self.batch_loss, self.batch_accuracy, self.uar = [], [], []
-        self.writer = SummaryWriter(log_dir=self.tensorboard_summary_path)
         self.logger.info(f'Configs used:\n{json.dumps(args, indent=4)}')
 
     def data_reader(self, data_filepath, data_files, train, should_batch=True, shuffle=True,
@@ -152,6 +154,9 @@ class ConvNetRunner:
             else:
                 return input_data, labels
 
+    # def train(self):
+    #     pass
+
     def train(self):
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
                                                     train=True)
@@ -163,7 +168,6 @@ class ConvNetRunner:
 
         total_step = len(train_data)
         for epoch in range(1, self.epochs):
-            log_learnable_parameter(self.writer, epoch - 1, network_params=self.network.named_parameters())
             self.network.train()
             self.batch_loss, self.batch_accuracy, self.batch_uar, self.batch_f1, self.batch_precision, \
             self.batch_recall, self.batch_auc, train_predictions, train_logits, audio_for_tensorboard_train = [], [], [], [], [], [], [], [], [], None
@@ -172,8 +176,6 @@ class ConvNetRunner:
                 self.optimiser.zero_grad()
                 label = to_tensor(label, device=self.device).float()
                 audio_data = to_tensor(audio_data, device=self.device)
-                if i == 0:
-                    self.writer.add_graph(self.network, audio_data)
                 predictions = self.network(audio_data).squeeze(1)
                 train_logits.extend(predictions)
                 loss = self.loss_function(predictions, label)
@@ -181,36 +183,46 @@ class ConvNetRunner:
                 train_predictions.extend(predictions)
                 loss.backward()
                 self.optimiser.step()
-                accuracy, uar, precision, recall, f1, auc = accuracy_fn(predictions, label, self.threshold)
                 self.batch_loss.append(to_numpy(loss))
-                self.batch_accuracy.append(to_numpy(accuracy))
-                self.batch_uar.append(uar)
-                self.batch_f1.append(f1)
-                self.batch_precision.append(precision)
-                self.batch_recall.append(recall)
-                self.batch_auc.append(auc)
+
+                batch_metrics = accuracy_fn(predictions, label, self.threshold)
+                batch_metrics['loss'] = to_numpy(loss)
+                self.batch_accuracy.append(to_numpy(batch_metrics['accuracy']))
+                self.batch_uar.append(batch_metrics['uar'])
+                self.batch_f1.append(batch_metrics['f1'])
+                self.batch_precision.append(batch_metrics['precision'])
+                self.batch_recall.append(batch_metrics['recall'])
+                self.batch_auc.append(batch_metrics['auc'])
+
+                wnb.log(batch_metrics)
 
                 if i % self.display_interval == 0:
                     self.logger.info(
-                            f"Epoch: {epoch}/{self.epochs} | Step: {i}/{total_step} | Loss: {'%.5f' % loss} | Accuracy: {'%.5f' % accuracy} | UAR: {'%.5f' % uar}| F1:{'%.5f' % f1} | Precision: {'%.5f' % precision} | Recall: {'%.5f' % recall} | AUC: {'%.5f' % auc}")
+                            f"Epoch: {epoch}/{self.epochs} | Step: {i}/{total_step} | Loss: {'%.5f' % loss} | "
+                            f"Accuracy: {'%.5f' % batch_metrics['accuracy']} | UAR: {'%.5f' % batch_metrics['uar']}| "
+                            f"F1:{'%.5f' % batch_metrics['f1']} | Precision: {'%.5f' % batch_metrics['precision']} | "
+                            f"Recall: {'%.5f' % batch_metrics['recall']} | AUC: {'%.5f' % batch_metrics['auc']}")
 
-            log_learnable_parameter(self.writer, epoch, to_tensor(train_logits, device=self.device),
-                                    name='train_logits')
-            log_learnable_parameter(self.writer, epoch, to_tensor(train_predictions, device=self.device),
-                                    name='train_activated')
+            # log_learnable_parameter(self.writer, epoch, to_tensor(train_logits, device=self.device),
+            #                         name='train_logits')
+            # log_learnable_parameter(self.writer, epoch, to_tensor(train_predictions, device=self.device),
+            #                         name='train_activated')
 
             # Decay learning rate
-            # self.scheduler.step(epoch=epoch)
-            log_summary(self.writer, epoch, accuracy=np.mean(self.batch_accuracy),
-                        loss=np.mean(self.batch_loss),
-                        uar=np.mean(self.batch_uar), precision=np.mean(self.batch_precision),
-                        recall=np.mean(self.batch_recall),
-                        auc=np.mean(self.batch_auc), lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
-                        type='Train')
+            self.scheduler.step(epoch=epoch)
+            wnb.log({"LR": self.optimiser.state_dict()['param_groups'][0]['lr']})
+            # log_summary(self.writer, epoch, accuracy=np.mean(self.batch_accuracy),
+            #             loss=np.mean(self.batch_loss),
+            #             uar=np.mean(self.batch_uar), precision=np.mean(self.batch_precision),
+            #             recall=np.mean(self.batch_recall),
+            #             auc=np.mean(self.batch_auc), lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
+            #             type='Train')
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
-                    f"Loss: {'%.5f' % np.mean(self.batch_loss)} | Accuracy: {'%.5f' % np.mean(self.batch_accuracy)} | UAR: {'%.5f' % np.mean(self.batch_uar)} | F1:{'%.5f' % np.mean(self.batch_f1)} | Precision:{'%.5f' % np.mean(self.batch_precision)} | Recall:{'%.5f' % np.mean(self.batch_recall)} | AUC:{'%.5f' % np.mean(self.batch_auc)}")
-            self.logger.info(f"Learning rate {self.optimiser.state_dict()['param_groups'][0]['lr']}")
+                    f"Loss: {'%.5f' % np.mean(self.batch_loss)} | Accuracy: {'%.5f' % np.mean(self.batch_accuracy)} "
+                    f"| UAR: {'%.5f' % np.mean(self.batch_uar)} | F1:{'%.5f' % np.mean(self.batch_f1)} "
+                    f"| Precision:{'%.5f' % np.mean(self.batch_precision)} | Recall:{'%.5f' % np.mean(self.batch_recall)} "
+                    f"| AUC:{'%.5f' % np.mean(self.batch_auc)}")
 
             # test data
             self.run_for_epoch(epoch, test_data, test_labels, type='Test')
@@ -221,7 +233,7 @@ class ConvNetRunner:
                 self.logger.info(f'Network successfully saved: {save_path}')
 
     def run_for_epoch(self, epoch, x, y, type):
-        # self.network.eval()
+        self.network.eval()
         # for m in self.network.modules():
         #     if isinstance(m, nn.BatchNorm2d):
         #         m.track_running_stats = False
@@ -239,17 +251,14 @@ class ConvNetRunner:
                 test_loss = self.loss_function(test_predictions, label)
                 test_predictions = nn.Sigmoid()(test_predictions)
                 predictions.append(to_numpy(test_predictions))
-                test_accuracy, test_uar, test_precision, test_recall, test_f1, test_auc = accuracy_fn(test_predictions,
-                                                                                                      label,
-                                                                                                      self.threshold)
+                test_batch_metrics = accuracy_fn(test_predictions, label, self.threshold)
                 self.test_batch_loss.append(to_numpy(test_loss))
-                self.test_batch_accuracy.append(to_numpy(test_accuracy))
-                self.test_batch_uar.append(test_uar)
-                self.test_batch_f1.append(test_f1)
-                self.test_batch_precision.append(test_precision)
-                self.test_batch_recall.append(test_recall)
-                self.test_batch_auc.append(test_auc)
-
+                self.test_batch_accuracy.append(to_numpy(test_batch_metrics['accuracy']))
+                self.test_batch_uar.append(test_batch_metrics['uar'])
+                self.test_batch_f1.append(test_batch_metrics['f1'])
+                self.test_batch_precision.append(test_batch_metrics['precision'])
+                self.test_batch_recall.append(test_batch_metrics['recall'])
+                self.test_batch_auc.append(test_batch_metrics['auc'])
                 tp, fp, tn, fn = custom_confusion_matrix(test_predictions, label, threshold=self.threshold)
                 predictions_dict['tp'].extend(tp)
                 predictions_dict['fp'].extend(fp)
@@ -263,19 +272,26 @@ class ConvNetRunner:
                 f"| UAR: {'%.5f' % np.mean(self.test_batch_uar)}| F1:{'%.5f' % np.mean(self.test_batch_f1)} "
                 f"| Precision:{'%.5f' % np.mean(self.test_batch_precision)} "
                 f"| Recall:{'%.5f' % np.mean(self.test_batch_recall)} | AUC:{'%.5f' % np.mean(self.test_batch_auc)}")
-
-        log_summary(self.writer, epoch, accuracy=np.mean(self.test_batch_accuracy),
-                    loss=np.mean(self.test_batch_loss),
-                    uar=np.mean(self.test_batch_uar), precision=np.mean(self.test_batch_precision),
-                    recall=np.mean(self.test_batch_recall), auc=np.mean(self.test_batch_auc),
-                    lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
-                    type=type)
-        log_conf_matrix(self.writer, epoch, predictions_dict=predictions_dict, type=type)
-
-        log_learnable_parameter(self.writer, epoch, to_tensor(logits, device=self.device),
-                                name=f'{type}_logits')
-        log_learnable_parameter(self.writer, epoch, to_tensor(predictions, device=self.device),
-                                name=f'{type}_predictions')
+        epoch_test_batch_metrics = {"test_batch_loss,": np.mean(self.test_batch_loss),
+                                    "test_batch_accuracy,": np.mean(self.test_batch_accuracy),
+                                    "test_batch_uar,": np.mean(self.test_batch_uar),
+                                    "test_batch_f1,": np.mean(self.test_batch_f1),
+                                    "test_batch_precision,": np.mean(self.test_batch_precision),
+                                    "test_batch_recall,": np.mean(self.test_batch_recall),
+                                    "test_batch_auc": np.mean(self.test_batch_auc)}
+        wnb.log(epoch_test_batch_metrics)
+        # log_summary(self.writer, epoch, accuracy=np.mean(self.test_batch_accuracy),
+        #             loss=np.mean(self.test_batch_loss),
+        #             uar=np.mean(self.test_batch_uar), precision=np.mean(self.test_batch_precision),
+        #             recall=np.mean(self.test_batch_recall), auc=np.mean(self.test_batch_auc),
+        #             lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
+        #             type=type)
+        # log_conf_matrix(self.writer, epoch, predictions_dict=predictions_dict, type=type)
+        #
+        # log_learnable_parameter(self.writer, epoch, to_tensor(logits, device=self.device),
+        #                         name=f'{type}_logits')
+        # log_learnable_parameter(self.writer, epoch, to_tensor(predictions, device=self.device),
+        #                         name=f'{type}_predictions')
 
         write_to_npy(filename=self.debug_filename, predictions=predictions, labels=y, epoch=epoch, accuracy=np.mean(
                 self.test_batch_accuracy), loss=np.mean(self.test_batch_loss), uar=np.mean(self.test_batch_uar),

@@ -1,6 +1,6 @@
 {
-  "run_name": "covid19_convnet",
-  "epochs": 25,
+  "run_name": "covid19_convnet_testing_wnb",
+  "epochs": 4,
   "batch_size": 32,
   "learning_rate": 0.001,
   "learning_rate_decay": 0.95,
@@ -11,12 +11,14 @@
   "network_restore_path": "",
   "normalise_while_training": true,
   "num_classes": 1,
-  "network_save_interval": 5,
-  "display_interval": 3,
+  "network_save_interval": 2,
+  "display_interval": 1,
   "dropout": 0.2,
-  "data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
+  "mit_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
+  "coswara_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
   "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
-  "data_source": "coswara"
+  "wandb": "",
+  "project_name": "Asym_COVID19_detection"
 }

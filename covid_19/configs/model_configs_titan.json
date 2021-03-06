@@ -1,8 +1,8 @@
 {
-  "run_name": "covid19_convnet",
-  "epochs": 25,
+  "run_name": "convnet",
+  "epochs": 30,
   "batch_size": 32,
-  "learning_rate": 0.001,
+  "learning_rate": 0.0001,
   "learning_rate_decay": 0.95,
   "threshold": 0.5,
   "network_metrics_basepath": "results/",
@@ -12,12 +12,13 @@
   "normalise_while_training": true,
   "num_classes": 1,
   "network_save_interval": 5,
-  "display_interval": 50,
+  "display_interval": 30,
   "dropout": 0.2,
   "mit_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "coswara_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/",
   "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
-  "data_source": "coswara"
+  "wandb": "",
+  "project_name": "Asym_COVID19_detection"
 }
