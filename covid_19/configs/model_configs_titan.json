@@ -20,5 +20,6 @@
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
   "wandb": "",
-  "project_name": "Asym_COVID19_detection"
+  "project_name": "Asym_COVID19_detection",
+  "wandb_tag": "convnet_benchmarch"
 }
