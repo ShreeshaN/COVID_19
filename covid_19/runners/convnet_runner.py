@@ -84,7 +84,7 @@ class ConvNetRunner:
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
                      entity="shreeshanwnb", reinit=True)
-            wnb.watch(self.network, log='all', log_freq=2)
+            wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
             self.logger.info("********* DATA FILE: " + train_file + " *********")
@@ -117,7 +117,10 @@ class ConvNetRunner:
                 in_data = read_pkl(data_filepath + file)
                 in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
+
+            split_type = None
             if train:
+                split_type = 'train'
                 for x in input_data:
                     self._min = min(np.min(x), self._min)
                     self._max = max(np.max(x), self._max)
@@ -131,15 +134,27 @@ class ConvNetRunner:
                 self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
                         [x for x in labels if x == 1])
                 self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
+                wnb.config.update({'pos_weight': self.pos_weight})
+            else:
+                split_type = 'test'
 
             self.logger.info(f'Total data {str(len(input_data))}')
+            wnb.config.update({split_type + '_data_len': len(input_data)})
+
             self.logger.info(f'Event rate {str(sum(labels) / len(labels))}')
+            wnb.config.update({split_type + '_event_rate': sum(labels) / len(labels)})
+            wnb.config.update(
+                    {split_type + '_ones_count': sum(labels), split_type + '_zeros_count': len(labels) - sum(labels)})
+
             self.logger.info(
                     f'Input data shape:{np.array(input_data).shape} | Output data shape:{np.array(labels).shape}')
+            wnb.config.update({split_type + '_input_data_shape': np.array(input_data).shape})
 
             self.logger.info(f'Min max values {self._min, self._max}')
             self.logger.info(f'Std values {self._std}')
             self.logger.info(f'Mean values {self._mean}')
+            wnb.config.update({split_type + '_min_val': self._min, split_type + '_max_val': self._max,
+                               split_type + '_mean': self._mean, split_type + '_std': self._std})
 
             # Normalizing `input data` on train dataset's min and max values
             if self.normalise:
@@ -272,13 +287,13 @@ class ConvNetRunner:
                 f"| UAR: {'%.5f' % np.mean(self.test_batch_uar)}| F1:{'%.5f' % np.mean(self.test_batch_f1)} "
                 f"| Precision:{'%.5f' % np.mean(self.test_batch_precision)} "
                 f"| Recall:{'%.5f' % np.mean(self.test_batch_recall)} | AUC:{'%.5f' % np.mean(self.test_batch_auc)}")
-        epoch_test_batch_metrics = {"test_batch_loss,": np.mean(self.test_batch_loss),
-                                    "test_batch_accuracy,": np.mean(self.test_batch_accuracy),
-                                    "test_batch_uar,": np.mean(self.test_batch_uar),
-                                    "test_batch_f1,": np.mean(self.test_batch_f1),
-                                    "test_batch_precision,": np.mean(self.test_batch_precision),
-                                    "test_batch_recall,": np.mean(self.test_batch_recall),
-                                    "test_batch_auc": np.mean(self.test_batch_auc)}
+        epoch_test_batch_metrics = {"test_loss": np.mean(self.test_batch_loss),
+                                    "test_accuracy": np.mean(self.test_batch_accuracy),
+                                    "test_uar": np.mean(self.test_batch_uar),
+                                    "test_f1": np.mean(self.test_batch_f1),
+                                    "test_precision": np.mean(self.test_batch_precision),
+                                    "test_recall": np.mean(self.test_batch_recall),
+                                    "test_auc": np.mean(self.test_batch_auc)}
         wnb.log(epoch_test_batch_metrics)
         # log_summary(self.writer, epoch, accuracy=np.mean(self.test_batch_accuracy),
         #             loss=np.mean(self.test_batch_loss),

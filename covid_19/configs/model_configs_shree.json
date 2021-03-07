@@ -1,5 +1,5 @@
 {
-  "run_name": "covid19_convnet_testing_wnb",
+  "run_name": "covid19",
   "epochs": 4,
   "batch_size": 32,
   "learning_rate": 0.001,
@@ -16,7 +16,6 @@
   "dropout": 0.2,
   "mit_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
   "coswara_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
-  "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
   "wandb": "",

@@ -16,10 +16,8 @@
   "dropout": 0.2,
   "mit_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "coswara_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/",
-  "data_processing_method": "fbank",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
   "wandb": "",
-  "project_name": "Asym_COVID19_detection",
-  "wandb_tag": "convnet_benchmarch"
+  "project_name": "Asym_COVID19_detection"
 }
