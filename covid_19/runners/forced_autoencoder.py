@@ -110,7 +110,7 @@ class ConvAutoencoderRunner:
         input_data, labels = [], []
 
         def split_data(combined_data):
-            return combined_data[0][:30], combined_data[1][:30]
+            return combined_data[0], combined_data[1]
 
         if infer:
             pass
