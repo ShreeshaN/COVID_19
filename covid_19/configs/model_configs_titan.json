@@ -1,5 +1,5 @@
 {
-  "run_name": "convnet",
+  "run_name": "convAE",
   "epochs": 30,
   "batch_size": 32,
   "learning_rate": 0.0001,

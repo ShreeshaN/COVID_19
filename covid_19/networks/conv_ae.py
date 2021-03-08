@@ -51,13 +51,12 @@ class ConvEncoder(nn.Module):
 
     def forward(self, x):
         x = x.unsqueeze(1)
-
         # print('x.shape ', x.shape)
         encoder_op1 = F.relu(self.conv1(x))
         # print('conv 1', encoder_op1.shape)
         encoder_op2 = F.relu(self.conv2(encoder_op1))
         # print('conv 2', encoder_op2.shape)
-        encoder_op2_pool, pool1_indices = self.pool1(encoder_op2)
+        encoder_op2_pool, self.pool1_indices = self.pool1(encoder_op2)
         # print('pool1', encoder_op2_pool.shape)
         encoder_op2_pool = self.dropout0(encoder_op2_pool)
 
@@ -65,15 +64,15 @@ class ConvEncoder(nn.Module):
         # print('conv 3', encoder_op3.shape)
         encoder_op4 = F.relu(self.conv4(encoder_op3))
         # print('conv 4', encoder_op4.shape)
-        encoder_op4_pool, pool2_indices = self.pool2(encoder_op4)
+        encoder_op4_pool, self.pool2_indices = self.pool2(encoder_op4)
         # print('pool2 ', encoder_op4_pool.shape)
 
         encoder_op5 = F.relu(self.conv5(encoder_op4_pool))
         # print('after conv net 5 ', encoder_op5.shape)
 
         # Stack filter maps next to each other
-        latent_space = encoder_op5.view(-1, encoder_op5.size()[1:].numel())
-        return latent_space
+
+        return encoder_op5
 
 
 class ConvDecoder(nn.Module):
@@ -92,7 +91,7 @@ class ConvDecoder(nn.Module):
         self.decoder5 = nn.ConvTranspose2d(in_channels=64, out_channels=1, kernel_size=3, stride=[1, 2])
         self.decoder5_bn = nn.BatchNorm2d(1)
 
-    def forward(self, x, pool1_indices, pool2_indices):
+    def forward(self, x, pool1_indices, pool2_indices, out_size):
         decoder_op1 = F.relu(self.decoder1_bn(self.decoder1(x)))  # , output_size=encoder_op4_pool.size()
         # print('decoder1', decoder_op1.size())
         decoder_op1_unpool1 = self.unpool1(decoder_op1, indices=pool2_indices)
@@ -106,7 +105,7 @@ class ConvDecoder(nn.Module):
 
         decoder_op4 = F.relu(self.decoder4_bn(self.decoder4(decoder_op3_unpool2)))
         # print('decoder4', decoder_op4.size())
-        reconstructed_x = self.decoder5_bn(self.decoder5(decoder_op4, output_size=x.size()))
+        reconstructed_x = self.decoder5_bn(self.decoder5(decoder_op4, output_size=out_size))
         return reconstructed_x
 
 
@@ -131,5 +130,7 @@ class ConvAutoEncoder(nn.Module):
         well as arbitrary operators on Tensors.
         """
         latent_space = self.encoder(x)
-        reconstructed_x = self.decoder(latent_space, self.encoder.pool1_indices, self.encoder.pool2_indices)
-        return reconstructed_x
+        reconstructed_x = self.decoder(latent_space, self.encoder.pool1_indices, self.encoder.pool2_indices,
+                                       out_size=x.unsqueeze(1).size())
+        latent_space = latent_space.view(-1, latent_space.size()[1:].numel())
+        return reconstructed_x, latent_space
