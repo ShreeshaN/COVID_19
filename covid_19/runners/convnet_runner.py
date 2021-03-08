@@ -296,7 +296,7 @@ class ConvNetRunner:
                                     "test_auc": np.mean(self.test_batch_auc)}
         wnb.log(epoch_test_batch_metrics)
         wnb.log({"test_cf": wnb.sklearn.plot_confusion_matrix(y_true=[label for sublist in y for label in sublist],
-                                                              y_pred=predictions,
+                                                              y_pred=np.where(predictions > self.threshold, 1, 0),
                                                               labels=['Negative', 'Positive'])})
         # log_summary(self.writer, epoch, accuracy=np.mean(self.test_batch_accuracy),
         #             loss=np.mean(self.test_batch_loss),
