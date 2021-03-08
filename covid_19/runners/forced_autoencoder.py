@@ -221,7 +221,7 @@ class ConvAutoencoderRunner:
 
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
-                    f"Loss: {'%.5f' % np.mean(self.batch_loss)} | Accuracy: {'%.5f' % train_metrics['accuracy']} "
+                    f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)} | Accuracy: {'%.5f' % train_metrics['accuracy']} "
                     f"| UAR: {'%.5f' % train_metrics['uar']} | F1:{'%.5f' % train_metrics['f1']} "
                     f"| Precision:{'%.5f' % train_metrics['precision']} | Recall:{'%.5f' % train_metrics['recall']} "
                     f"| AUC:{'%.5f' % train_metrics['auc']}")
