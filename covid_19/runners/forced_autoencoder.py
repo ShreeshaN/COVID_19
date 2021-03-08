@@ -267,9 +267,6 @@ class ConvAutoencoderRunner:
                 f"| Precision:{'%.5f' % test_metrics['test_precision']} "
                 f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
         wnb.log(test_metrics)
-        wnb.log({"test_cf": wnb.sklearn.plot_confusion_matrix(y_true=[label for sublist in y for label in sublist],
-                                                              y_pred=masked_predictions,
-                                                              labels=['Negative', 'Positive'])})
 
         write_to_npy(filename=self.debug_filename, predictions=predictions, labels=y, epoch=epoch,
                      accuracy=test_metrics['test_accuracy'], loss=np.mean(self.test_batch_loss),
@@ -278,6 +275,10 @@ class ConvAutoencoderRunner:
                      recall=test_metrics['test_recall'], auc=test_metrics['test_auc'],
                      lr=self.optimiser.state_dict()['param_groups'][0]['lr'],
                      type=type)
+        if epoch + 1 == self.epochs:
+            wnb.log({"test_cf": wnb.sklearn.plot_confusion_matrix(y_true=[label for sublist in y for label in sublist],
+                                                                  y_pred=masked_predictions,
+                                                                  labels=['Negative', 'Positive'])})
 
     def test(self):
         test_data, test_labels = self.data_reader(self.data_read_path + 'test_challenge_data.npy',
