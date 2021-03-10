@@ -129,6 +129,13 @@ class PlainConvAutoencoderRunner:
                     self._max = max(np.max(x), self._max)
                 self._mean, self._std = np.mean(input_data), np.std(input_data)
 
+                self.logger.info('Raw train data values')
+                self.logger.info(f'Raw Train data Min max values {self._min, self._max}')
+                self.logger.info(f'Raw Train data Std values {self._std}')
+                self.logger.info(f'Raw Train data Mean values {self._mean}')
+                wnb.config.update({'raw_' + split_type + '_min_val': self._min, split_type + '_max_val': self._max,
+                                   'raw_' + split_type + '_mean': self._mean, split_type + '_std': self._std})
+
                 data = [(x, y) for x, y in zip(input_data, labels)]
                 random.shuffle(data)
                 input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
@@ -138,8 +145,16 @@ class PlainConvAutoencoderRunner:
                         [x for x in labels if x == 1])
                 self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
                 wnb.config.update({'pos_weight': self.pos_weight})
+
             else:
                 split_type = 'test'
+
+            self.logger.info(f'Normalized {type} data values')
+            self.logger.info(f'Normalized {type} data Min max values {self._min, self._max}')
+            self.logger.info(f'Normalized {type} data Std values {self._std}')
+            self.logger.info(f'Normalized {type} data Mean values {self._mean}')
+            wnb.config.update({'normalized_' + split_type + '_min_val': self._min, split_type + '_max_val': self._max,
+                               'normalized_' + split_type + '_mean': self._mean, split_type + '_std': self._std})
 
             self.logger.info(f'Total data {str(len(input_data))}')
             wnb.config.update({split_type + '_data_len': len(input_data)})
