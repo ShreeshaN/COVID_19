@@ -204,9 +204,9 @@ class PlainConvAutoencoderRunner:
                 self.optimiser.step()
                 self.batch_loss.append(to_numpy(torch.mean(loss)))
 
-                self.logger.info('***** Overall Train Metrics ***** ')
-                self.logger.info(
-                        f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)}")
+            self.logger.info('***** Overall Train Metrics ***** ')
+            self.logger.info(
+                    f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)}")
 
             wnb.log({'train_reconstruction_loss': np.mean(self.batch_loss)})
 
