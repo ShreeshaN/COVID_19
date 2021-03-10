@@ -9,8 +9,6 @@ Description:
 ..todo::
 
 """
-from PIL import Image
-import skimage.io
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
