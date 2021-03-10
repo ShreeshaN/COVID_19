@@ -1,6 +1,6 @@
 {
   "run_name": "convAE",
-  "epochs": 30,
+  "epochs": 100,
   "batch_size": 32,
   "learning_rate": 0.0001,
   "learning_rate_decay": 0.95,
@@ -11,8 +11,8 @@
   "network_restore_path": "",
   "normalise_while_training": true,
   "num_classes": 1,
-  "network_save_interval": 5,
-  "display_interval": 30,
+  "network_save_interval": 3,
+  "display_interval": 5,
   "dropout": 0.2,
   "mit_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "coswara_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/",

@@ -1,6 +1,6 @@
 {
-  "run_name": "covid19",
-  "epochs": 4,
+  "run_name": "plainAE",
+  "epochs": 10,
   "batch_size": 32,
   "learning_rate": 0.001,
   "learning_rate_decay": 0.95,
@@ -11,7 +11,7 @@
   "network_restore_path": "",
   "normalise_while_training": true,
   "num_classes": 1,
-  "network_save_interval": 2,
+  "network_save_interval": 1,
   "display_interval": 1,
   "dropout": 0.2,
   "mit_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
