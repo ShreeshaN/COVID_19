@@ -134,8 +134,10 @@ class PlainConvAutoencoderRunner:
                 self.logger.info(f'Raw Train data Std values {self._std}')
                 self.logger.info(f'Raw Train data Mean values {self._mean}')
                 wnb.config.update(
-                        {'raw_' + split_type + '_min_val': str(self._min), split_type + '_max_val': str(self._max),
-                         'raw_' + split_type + '_mean': str(self._mean), split_type + '_std': str(self._std)})
+                        {'raw_' + split_type + '_min_val': str(self._min),
+                         'raw_' + split_type + '_max_val': str(self._max),
+                         'raw_' + split_type + '_mean': str(self._mean),
+                         'raw_' + split_type + '_std': str(self._std)})
 
                 data = [(x, y) for x, y in zip(input_data, labels)]
                 random.shuffle(data)
@@ -173,9 +175,9 @@ class PlainConvAutoencoderRunner:
                 self.logger.info(f'Normalized {split_type} data Std values {np.std(input_data)}')
                 self.logger.info(f'Normalized {split_type} data Mean values {np.mean(input_data)}')
                 wnb.config.update({'normalized_' + split_type + '_min_val': str(np.min(input_data)),
-                                   split_type + '_max_val': str(np.max(input_data)),
+                                   'normalized_' + split_type + '_max_val': str(np.max(input_data)),
                                    'normalized_' + split_type + '_mean': str(np.mean(input_data)),
-                                   split_type + '_std': str(np.std(input_data))})
+                                   'normalized_' + split_type + '_std': str(np.std(input_data))})
 
             if should_batch:
                 batched_input = [input_data[pos:pos + self.batch_size] for pos in
