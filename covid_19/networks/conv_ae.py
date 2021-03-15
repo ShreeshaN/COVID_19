@@ -105,7 +105,7 @@ class ConvDecoder(nn.Module):
 
         decoder_op4 = F.relu(self.decoder4_bn(self.decoder4(decoder_op3_unpool2)))
         # print('decoder4', decoder_op4.size())
-        reconstructed_x = self.decoder5_bn(self.decoder5(decoder_op4, output_size=out_size))
+        reconstructed_x = F.sigmoid(self.decoder5_bn(self.decoder5(decoder_op4, output_size=out_size)))
         return reconstructed_x
 
 

@@ -87,7 +87,7 @@ class PlainConvAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -149,13 +149,6 @@ class PlainConvAutoencoderRunner:
             else:
                 split_type = 'test'
 
-            self.logger.info(f'Normalized {type} data values')
-            self.logger.info(f'Normalized {type} data Min max values {self._min, self._max}')
-            self.logger.info(f'Normalized {type} data Std values {self._std}')
-            self.logger.info(f'Normalized {type} data Mean values {self._mean}')
-            wnb.config.update({'normalized_' + split_type + '_min_val': self._min, split_type + '_max_val': self._max,
-                               'normalized_' + split_type + '_mean': self._mean, split_type + '_std': self._std})
-
             self.logger.info(f'Total data {str(len(input_data))}')
             wnb.config.update({split_type + '_data_len': len(input_data)})
 
@@ -173,11 +166,15 @@ class PlainConvAutoencoderRunner:
                 input_data = (input_data - self._min) / (self._max - self._min)
                 input_data = (input_data - self._mean) / self._std
 
-            self.logger.info(f'Min max values {self._min, self._max}')
-            self.logger.info(f'Std values {self._std}')
-            self.logger.info(f'Mean values {self._mean}')
-            wnb.config.update({split_type + '_min_val': self._min, split_type + '_max_val': self._max,
-                               split_type + '_mean': self._mean, split_type + '_std': self._std})
+                self.logger.info(f'Normalized {split_type} data values')
+                self.logger.info(
+                        f'Normalized {split_type} data Min max values {np.min(input_data), np.max(input_data)}')
+                self.logger.info(f'Normalized {split_type} data Std values {np.std(input_data)}')
+                self.logger.info(f'Normalized {split_type} data Mean values {np.mean(input_data)}')
+                wnb.config.update({'normalized_' + split_type + '_min_val': np.min(input_data),
+                                   split_type + '_max_val': np.max(input_data),
+                                   'normalized_' + split_type + '_mean': np.mean(input_data),
+                                   split_type + '_std': np.std(input_data)})
 
             if should_batch:
                 batched_input = [input_data[pos:pos + self.batch_size] for pos in
