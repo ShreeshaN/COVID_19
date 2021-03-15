@@ -1,6 +1,8 @@
 {
   "run_name": "plainAE",
-  "wnb_tag": "sigmoid reconstruction",
+  "wnb_tag": [
+    "sigmoid reconstruction"
+  ],
   "epochs": 500,
   "batch_size": 32,
   "learning_rate": 0.00001,

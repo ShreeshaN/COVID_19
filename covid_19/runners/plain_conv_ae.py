@@ -167,7 +167,7 @@ class PlainConvAutoencoderRunner:
             # Normalizing `input data` on train dataset's min and max values
             if self.normalise:
                 input_data = (input_data - self._min) / (self._max - self._min)
-                input_data = (input_data - self._mean) / self._std
+                # input_data = (input_data - self._mean) / self._std
 
                 self.logger.info(f'Normalized {split_type} data values')
                 self.logger.info(
