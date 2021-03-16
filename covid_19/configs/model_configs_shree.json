@@ -19,6 +19,7 @@
   "dropout": 0.2,
   "mit_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
   "coswara_data_save_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/",
+  "network_restore_path": "/Users/badgod/badgod_documents/Datasets/covid19/processed_data/models/plainAE_coswara_train_data_fbank_cough-shallow_1615822666_498.pt",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
   "wandb": "",

@@ -27,7 +27,7 @@ from covid_19.networks.conv_ae import ConvAutoEncoder
 from covid_19.utils import file_utils
 from covid_19.utils.data_utils import read_pkl
 from covid_19.utils.logger import Logger
-from covid_19.utils.network_utils import to_tensor, to_numpy
+from covid_19.utils.network_utils import to_tensor, to_numpy, accuracy_fn
 
 import wandb as wnb
 
@@ -87,13 +87,17 @@ class PlainConvAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  #
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
             self.logger.info("********* DATA FILE: " + train_file + " *********")
             self.logger.info(str(id(self.logger)))
         if self.test_net:
+            wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  #
+            wnb.watch(self.network)  # , log='all', log_freq=3
+            self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
             self.logger.info('Loading Network')
             self.network.load_state_dict(torch.load(self.network_restore_path, map_location=self.device))
             self.network.eval()
@@ -111,10 +115,14 @@ class PlainConvAutoencoderRunner:
         input_data, labels = [], []
 
         def split_data(combined_data):
-            return combined_data[0], combined_data[1]
+            return np.array(combined_data[0]), combined_data[1]
 
         if infer:
-            pass
+            for file in data_files:
+                self.logger.info('Reading input file ' + file)
+                in_data = read_pkl(data_filepath + file)
+                in_data, out_data = split_data(in_data)
+                input_data.extend(in_data), labels.extend(out_data)
         else:
             for file in data_files:
                 self.logger.info('Reading input file ' + file)
@@ -122,70 +130,70 @@ class PlainConvAutoencoderRunner:
                 in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
 
-            if train:
-                split_type = 'train'
-                for x in input_data:
-                    self._min = min(np.min(x), self._min)
-                    self._max = max(np.max(x), self._max)
-                self._mean, self._std = np.mean(input_data), np.std(input_data)
+        if train:
+            split_type = 'train'
+            for x in input_data:
+                self._min = min(np.min(x), self._min)
+                self._max = max(np.max(x), self._max)
+            self._mean, self._std = np.mean(input_data), np.std(input_data)
 
-                self.logger.info('Raw train data values')
-                self.logger.info(f'Raw Train data Min max values {self._min, self._max}')
-                self.logger.info(f'Raw Train data Std values {self._std}')
-                self.logger.info(f'Raw Train data Mean values {self._mean}')
-                wnb.config.update(
-                        {'raw_' + split_type + '_min_val': str(self._min),
-                         'raw_' + split_type + '_max_val': str(self._max),
-                         'raw_' + split_type + '_mean': str(self._mean),
-                         'raw_' + split_type + '_std': str(self._std)})
-
-                data = [(x, y) for x, y in zip(input_data, labels)]
-                random.shuffle(data)
-                input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
-
-                # Initialize pos_weight based on training data
-                self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
-                        [x for x in labels if x == 1])
-                self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
-                wnb.config.update({'pos_weight': self.pos_weight})
-
-            else:
-                split_type = 'test'
-
-            self.logger.info(f'Total data {str(len(input_data))}')
-            wnb.config.update({split_type + '_data_len': len(input_data)})
-
-            self.logger.info(f'Event rate {str(sum(labels) / len(labels))}')
-            wnb.config.update({split_type + '_event_rate': sum(labels) / len(labels)})
+            self.logger.info('Raw train data values')
+            self.logger.info(f'Raw Train data Min max values {self._min, self._max}')
+            self.logger.info(f'Raw Train data Std values {self._std}')
+            self.logger.info(f'Raw Train data Mean values {self._mean}')
             wnb.config.update(
-                    {split_type + '_ones_count': sum(labels), split_type + '_zeros_count': len(labels) - sum(labels)})
+                    {'raw_' + split_type + '_min_val': str(self._min),
+                     'raw_' + split_type + '_max_val': str(self._max),
+                     'raw_' + split_type + '_mean': str(self._mean),
+                     'raw_' + split_type + '_std': str(self._std)})
 
+            data = [(x, y) for x, y in zip(input_data, labels)]
+            random.shuffle(data)
+            input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
+
+            # Initialize pos_weight based on training data
+            self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
+                    [x for x in labels if x == 1])
+            self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
+            wnb.config.update({'pos_weight': self.pos_weight})
+
+        else:
+            split_type = 'test'
+
+        self.logger.info(f'Total data {str(len(input_data))}')
+        wnb.config.update({split_type + '_data_len': len(input_data)})
+
+        self.logger.info(f'Event rate {str(sum(labels) / len(labels))}')
+        wnb.config.update({split_type + '_event_rate': sum(labels) / len(labels)})
+        wnb.config.update(
+                {split_type + '_ones_count': sum(labels), split_type + '_zeros_count': len(labels) - sum(labels)})
+
+        self.logger.info(
+                f'Input data shape:{np.array(input_data).shape} | Output data shape:{np.array(labels).shape}')
+        wnb.config.update({split_type + '_input_data_shape': np.array(input_data).shape})
+
+        # Normalizing `input data` on train dataset's min and max values
+        if self.normalise:
+            input_data = (np.array(input_data) - self._min) / (self._max - self._min)
+            # input_data = (input_data - self._mean) / self._std
+
+            self.logger.info(f'Normalized {split_type} data values')
             self.logger.info(
-                    f'Input data shape:{np.array(input_data).shape} | Output data shape:{np.array(labels).shape}')
-            wnb.config.update({split_type + '_input_data_shape': np.array(input_data).shape})
+                    f'Normalized {split_type} data Min max values {np.min(input_data), np.max(input_data)}')
+            self.logger.info(f'Normalized {split_type} data Std values {np.std(input_data)}')
+            self.logger.info(f'Normalized {split_type} data Mean values {np.mean(input_data)}')
+            wnb.config.update({'normalized_' + split_type + '_min_val': str(np.min(input_data)),
+                               'normalized_' + split_type + '_max_val': str(np.max(input_data)),
+                               'normalized_' + split_type + '_mean': str(np.mean(input_data)),
+                               'normalized_' + split_type + '_std': str(np.std(input_data))})
 
-            # Normalizing `input data` on train dataset's min and max values
-            if self.normalise:
-                input_data = (input_data - self._min) / (self._max - self._min)
-                # input_data = (input_data - self._mean) / self._std
-
-                self.logger.info(f'Normalized {split_type} data values')
-                self.logger.info(
-                        f'Normalized {split_type} data Min max values {np.min(input_data), np.max(input_data)}')
-                self.logger.info(f'Normalized {split_type} data Std values {np.std(input_data)}')
-                self.logger.info(f'Normalized {split_type} data Mean values {np.mean(input_data)}')
-                wnb.config.update({'normalized_' + split_type + '_min_val': str(np.min(input_data)),
-                                   'normalized_' + split_type + '_max_val': str(np.max(input_data)),
-                                   'normalized_' + split_type + '_mean': str(np.mean(input_data)),
-                                   'normalized_' + split_type + '_std': str(np.std(input_data))})
-
-            if should_batch:
-                batched_input = [input_data[pos:pos + self.batch_size] for pos in
-                                 range(0, len(input_data), self.batch_size)]
-                batched_labels = [labels[pos:pos + self.batch_size] for pos in range(0, len(labels), self.batch_size)]
-                return batched_input, batched_labels
-            else:
-                return input_data, labels
+        if should_batch:
+            batched_input = [input_data[pos:pos + self.batch_size] for pos in
+                             range(0, len(input_data), self.batch_size)]
+            batched_labels = [labels[pos:pos + self.batch_size] for pos in range(0, len(labels), self.batch_size)]
+            return batched_input, batched_labels
+        else:
+            return input_data, labels
 
     def train(self):
 
@@ -298,3 +306,66 @@ class PlainConvAutoencoderRunner:
                                                               zip(one_images, one_losses)]})
             wnb.log({"Test negative samples reconstruction": [wnb.Image(img, caption=str(l)) for img, l in
                                                               zip(zero_images, zero_losses)]})
+
+    def mask_preds_for_one_class(self, predictions):
+        # 1 --> inliers, -1 --> outliers
+        # in our case, inliers are non covid samples. i.e label 0.
+        # outliers are covid samples. i.e label 1.
+        return [1 if x == -1 else 0 for x in predictions]
+
+    def infer(self):
+        from sklearn import svm
+        import pickle
+        self._min, self._max = -80.0, 3.8146973e-06
+        train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file],
+                                                    shuffle=False,
+                                                    train=True)
+
+        test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file],
+                                                  shuffle=False,
+                                                  train=False)
+        train_latent_features, test_latent_features = [], []
+        with torch.no_grad():
+            for i, (audio_data, label) in enumerate(zip(train_data, train_labels)):
+                audio_data = to_tensor(audio_data, device=self.device)
+                _, train_latent = self.network(audio_data)
+                train_latent_features.extend(to_numpy(train_latent.squeeze(1)))
+        pickle.dump(train_latent_features,
+                    open('train_latent.npy', 'wb'))
+
+        oneclass_svm = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+        oneclass_svm.fit(train_latent_features)
+        oneclass_predictions = oneclass_svm.predict(train_latent_features)
+        masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
+        train_metrics = accuracy_fn(to_tensor(masked_predictions),
+                                    to_tensor([element for sublist in train_labels for element in sublist]),
+                                    threshold=self.threshold)
+        train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
+        self.logger.info(f'***** {type} Metrics ***** ')
+        self.logger.info(
+                f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
+                f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
+                f"| Precision:{'%.5f' % train_metrics['train_precision']} "
+                f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
+
+        # Test
+        with torch.no_grad():
+            for i, (audio_data, label) in enumerate(zip(test_data, test_labels)):
+                audio_data = to_tensor(audio_data, device=self.device)
+                _, test_latent = self.network(audio_data)
+                test_latent_features.extend(to_numpy(test_latent.squeeze(1)))
+        pickle.dump(test_latent_features,
+                    open('test_latent.npy', 'wb'))
+
+        oneclass_predictions = oneclass_svm.predict(test_latent_features)
+        masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
+        test_metrics = accuracy_fn(to_tensor(masked_predictions),
+                                   to_tensor([element for sublist in test_labels for element in sublist]),
+                                   threshold=self.threshold)
+        test_metrics = {'test_' + k: v for k, v in test_metrics.items()}
+        self.logger.info(f'***** {type} Metrics ***** ')
+        self.logger.info(
+                f"Accuracy: {'%.5f' % test_metrics['test_accuracy']} "
+                f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
+                f"| Precision:{'%.5f' % test_metrics['test_precision']} "
+                f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
