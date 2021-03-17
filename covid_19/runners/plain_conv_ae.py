@@ -351,7 +351,8 @@ class PlainConvAutoencoderRunner:
                 f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
                 f"| Precision:{'%.5f' % train_metrics['train_precision']} "
                 f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
-        self.logger.info('Train Confusion matrix - \n' + str(confusion_matrix(train_labels, masked_predictions)))
+        self.logger.info('Train Confusion matrix - \n' + str(
+                confusion_matrix([element for sublist in train_labels for element in sublist], masked_predictions)))
 
         # Test
         with torch.no_grad():
@@ -374,7 +375,8 @@ class PlainConvAutoencoderRunner:
                 f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
                 f"| Precision:{'%.5f' % test_metrics['test_precision']} "
                 f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
-        self.logger.info('Test Confusion matrix - \n' + str(confusion_matrix(test_labels, masked_predictions)))
+        self.logger.info('Test Confusion matrix - \n' + str(
+            confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
         # from sklearn import svm
         # from sklearn.metrics import confusion_matrix
         # import pickle as pk
