@@ -116,7 +116,7 @@ class PlainConvAutoencoderRunner:
 
         def split_data(combined_data):
             # pass only negative samples
-            idx = [e for e, x in enumerate(combined_data[1])]
+            idx = [e for e, x in enumerate(combined_data[1]) if x == 0]
             return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
         if infer:
