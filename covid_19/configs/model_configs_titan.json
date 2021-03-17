@@ -1,7 +1,7 @@
 {
   "run_name": "plainAE",
   "wnb_tag": [
-    "sigmoid reconstruction"
+    "forced_AE"
   ],
   "epochs": 500,
   "batch_size": 32,
