@@ -318,6 +318,7 @@ class PlainConvAutoencoderRunner:
     def infer(self):
         pass
         from sklearn import svm
+        from sklearn.metrics import confusion_matrix
         import pickle
         self._min, self._max = -80.0, 3.8146973e-06
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file],
@@ -344,12 +345,13 @@ class PlainConvAutoencoderRunner:
                                     to_tensor([element for sublist in train_labels for element in sublist]),
                                     threshold=self.threshold)
         train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
-        self.logger.info(f'***** {type} Metrics ***** ')
+        self.logger.info(f'***** Train Metrics ***** ')
         self.logger.info(
                 f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
                 f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
                 f"| Precision:{'%.5f' % train_metrics['train_precision']} "
                 f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
+        self.logger.info('Train Confusion matrix - \n' + str(confusion_matrix(train_labels, masked_predictions)))
 
         # Test
         with torch.no_grad():
@@ -366,12 +368,13 @@ class PlainConvAutoencoderRunner:
                                    to_tensor([element for sublist in test_labels for element in sublist]),
                                    threshold=self.threshold)
         test_metrics = {'test_' + k: v for k, v in test_metrics.items()}
-        self.logger.info(f'***** {type} Metrics ***** ')
+        self.logger.info(f'***** Test Metrics ***** ')
         self.logger.info(
                 f"Accuracy: {'%.5f' % test_metrics['test_accuracy']} "
                 f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
                 f"| Precision:{'%.5f' % test_metrics['test_precision']} "
                 f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
+        self.logger.info('Test Confusion matrix - \n' + str(confusion_matrix(test_labels, masked_predictions)))
         # from sklearn import svm
         # from sklearn.metrics import confusion_matrix
         # import pickle as pk
