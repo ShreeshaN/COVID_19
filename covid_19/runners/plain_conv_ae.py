@@ -88,7 +88,7 @@ class PlainConvAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  #
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
