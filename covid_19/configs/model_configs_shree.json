@@ -1,7 +1,7 @@
 {
-  "run_name": "plainAE",
+  "run_name": "plain_conv_AE",
   "wnb_tag": [
-    "sigmoid reconstruction"
+    "forced_conv_AE"
   ],
   "epochs": 10,
   "batch_size": 32,

@@ -1,18 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-@created on: 3/7/21,
-@author: Shreesha N,
-@version: v0.0.1
-@system name: badgod
-Description:
-
-..todo::
-
-"""
-
-# -*- coding: utf-8 -*-
-"""
-@created on: 4/4/20,
+@created on: 4/3/21,
 @author: Shreesha N,
 @version: v0.0.1
 @system name: badgod
@@ -24,7 +12,10 @@ Description:
 
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 from torch import tensor
+
+flattened_size = 32 * 9 * 40  # 32 filters each of size 9*40 - reduced from a input size of 40*690 
 
 
 class ConvEncoder(nn.Module):
@@ -48,6 +39,8 @@ class ConvEncoder(nn.Module):
         self.conv5_bn = nn.BatchNorm2d(32)
         self.pool1_indices = None
         self.pool2_indices = None
+        self.fc_mu = nn.Linear(flattened_size, flattened_size)
+        self.fc_var = nn.Linear(flattened_size, flattened_size)
 
     def forward(self, x):
         x = x.unsqueeze(1)
@@ -66,13 +59,13 @@ class ConvEncoder(nn.Module):
         # print('conv 4', encoder_op4.shape)
         encoder_op4_pool, self.pool2_indices = self.pool2(encoder_op4)
         # print('pool2 ', encoder_op4_pool.shape)
-
         encoder_op5 = F.relu(self.conv5(encoder_op4_pool))
-        # print('after conv net 5 ', encoder_op5.shape)
-
-        # Stack filter maps next to each other
-
-        return encoder_op5
+        flattened = encoder_op5.view(encoder_op5.size(0), -1)
+        # Split the result into mu and var components
+        # of the latent Gaussian distribution
+        mu = self.fc_mu(flattened)
+        log_var = self.fc_var(flattened)
+        return mu, log_var
 
 
 class ConvDecoder(nn.Module):
@@ -92,6 +85,7 @@ class ConvDecoder(nn.Module):
         self.decoder5_bn = nn.BatchNorm2d(1)
 
     def forward(self, x, pool1_indices, pool2_indices, out_size):
+        x = x.view(x.size(0), 32, 9, 40)
         decoder_op1 = F.relu(self.decoder1_bn(self.decoder1(x)))  # , output_size=encoder_op4_pool.size()
         # print('decoder1', decoder_op1.size())
         decoder_op1_unpool1 = self.unpool1(decoder_op1, indices=pool2_indices)
@@ -105,11 +99,11 @@ class ConvDecoder(nn.Module):
 
         decoder_op4 = F.relu(self.decoder4_bn(self.decoder4(decoder_op3_unpool2)))
         # print('decoder4', decoder_op4.size())
-        reconstructed_x = F.sigmoid(self.decoder5_bn(self.decoder5(decoder_op4, output_size=out_size)))
+        reconstructed_x = torch.sigmoid(self.decoder5_bn(self.decoder5(decoder_op4, output_size=out_size)))
         return reconstructed_x
 
 
-class ConvAutoEncoder(nn.Module):
+class ConvVariationalAutoEncoder(nn.Module):
 
     def __init__(self):
         """
@@ -118,10 +112,15 @@ class ConvAutoEncoder(nn.Module):
         member variables.
         """
 
-        super(ConvAutoEncoder, self).__init__()
+        super(ConvVariationalAutoEncoder, self).__init__()
 
         self.encoder = ConvEncoder()
         self.decoder = ConvDecoder()
+
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps * std + mu
 
     def forward(self, x):
         """
@@ -129,9 +128,12 @@ class ConvAutoEncoder(nn.Module):
         a Tensor of output data. We can use Modules defined in the constructor as
         well as arbitrary operators on Tensors.
         """
-        latent_space = self.encoder(x)
-        reconstructed_x = self.decoder(latent_space, self.encoder.pool1_indices, self.encoder.pool2_indices,
+        mu, log_var = self.encoder(x)
+        z = self.reparameterize(mu, log_var)
+        reconstructed_x = self.decoder(z, self.encoder.pool1_indices, self.encoder.pool2_indices,
                                        out_size=x.unsqueeze(1).size())
-        latent_space = latent_space.view(-1, latent_space.size()[1:].numel())
-        return reconstructed_x, latent_space
+        return reconstructed_x, mu, log_var
 
+    def sample(self, n):
+        z = torch.randn((n, flattened_size))
+        return self.decoder(z)

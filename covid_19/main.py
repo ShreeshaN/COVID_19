@@ -23,7 +23,7 @@ def parse():
     parser.add_argument('--train_net', type=bool)
     parser.add_argument('--test_net', type=bool)
     parser.add_argument('--configs_file', type=str)
-    parser.add_argument('--network', type=str, choices=['convnet', 'convAE', 'plainAE'])
+    parser.add_argument('--network', type=str, choices=['convnet', 'convAE', 'plainAE', 'plainVAE'])
     args = parser.parse_args()
     return args
 
@@ -130,6 +130,9 @@ def run(args):
         elif args.network == 'plainAE':
             from covid_19.runners.plain_conv_ae import PlainConvAutoencoderRunner
             network = PlainConvAutoencoderRunner(args=args, train_file=train_file, test_file=test_file)
+        elif args.network == 'plainVAE':
+            from covid_19.runners.plain_conv_vae import PlainConvVariationalAutoencoderRunner
+            network = PlainConvVariationalAutoencoderRunner(args=args, train_file=train_file, test_file=test_file)
         else:  # Default network
             from covid_19.runners.convnet_runner import ConvNetRunner
             network = ConvNetRunner(args=args, train_file=train_file, test_file=test_file)

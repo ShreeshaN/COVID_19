@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-@created on: 3/8/21,
+@created on: 4/3/21,
 @author: Shreesha N,
 @version: v0.0.1
 @system name: badgod
@@ -23,7 +23,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from covid_19.networks.conv_ae import ConvAutoEncoder
+from covid_19.networks.conv_vae import ConvVariationalAutoEncoder
 from covid_19.utils import file_utils
 from covid_19.utils.data_utils import read_pkl
 from covid_19.utils.logger import Logger
@@ -36,7 +36,7 @@ torch.manual_seed(1234)
 np.random.seed(1234)
 
 
-class PlainConvAutoencoderRunner:
+class PlainConvVariationalAutoencoderRunner:
     def __init__(self, args, train_file, test_file):
         args['train_file'] = train_file
         self.train_file = train_file
@@ -76,7 +76,7 @@ class PlainConvAutoencoderRunner:
         paths = [self.network_save_path, self.tensorboard_summary_path]
         file_utils.create_dirs(paths)
 
-        self.network = ConvAutoEncoder().to(self.device)
+        self.network = ConvVariationalAutoEncoder().to(self.device)
         self.pos_weight = None
         self.loss_function = nn.MSELoss(reduction='none')
         self.learning_rate_decay = args.learning_rate_decay
@@ -117,10 +117,10 @@ class PlainConvAutoencoderRunner:
 
         def split_data(combined_data):
             # pass only negative samples
-            idx = [e for e, x in enumerate(combined_data[1]) if x == 0]  #
-            return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
+            # idx = [e for e, x in enumerate(combined_data[1])] #  if x == 0
+            # return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
-            # return np.array(combined_data[0]), np.array(combined_data[1])
+            return np.array(combined_data[0])[:50], np.array(combined_data[1])[:50]
 
         if infer:
             for file in data_files:
@@ -217,27 +217,32 @@ class PlainConvAutoencoderRunner:
 
         for epoch in range(1, self.epochs):
             self.network.train()
-            self.latent_features, train_reconstructed, train_losses, self.batch_loss = [], [], [], []
+            self.latent_features, train_reconstructed, train_losses, self.batch_loss, self.batch_kld = [], [], [], [], []
 
             for i, (audio_data, label) in enumerate(
                     zip(train_data, train_labels)):
                 self.optimiser.zero_grad()
 
                 audio_data = to_tensor(audio_data, device=self.device)
-                predictions, latent = self.network(audio_data)
+                predictions, mu, log_var = self.network(audio_data)
                 predictions = predictions.squeeze(1)
                 train_reconstructed.extend(to_numpy(predictions))
-                loss = self.loss_function(predictions, audio_data)
-                train_losses.extend(to_numpy(torch.mean(loss, dim=[1, 2])))
-                torch.mean(loss).backward()
+                squared_loss = self.loss_function(predictions, audio_data)
+                kld_loss = torch.mean(0.5 * torch.sum(log_var.exp() - log_var - 1 + mu.pow(2)))
+                mse_loss = torch.mean(squared_loss, dim=[1, 2])
+                train_losses.extend(to_numpy(mse_loss))
+                torch.mean(mse_loss + kld_loss).backward()
                 self.optimiser.step()
-                self.batch_loss.append(to_numpy(torch.mean(loss)))
+                self.batch_loss.append(to_numpy(torch.mean(squared_loss)))
+                self.batch_kld.append(to_numpy(kld_loss))
 
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
-                    f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)}")
+                    f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)} |"
+                    f" KLD: {'%.5f' % np.mean(self.batch_kld)}")
 
             wnb.log({'train_reconstruction_loss': np.mean(self.batch_loss)})
+            wnb.log({'train_kld': np.mean(self.batch_kld)})
 
             # test data
             self.run_for_epoch(epoch, test_data, test_labels, type='Test')
@@ -275,6 +280,7 @@ class PlainConvAutoencoderRunner:
             plt.clf()
             librosa.display.specshow(re)
             plt.savefig('re.jpg')
+            plt.close('all')
             merged_im = np.concatenate((cv2.cvtColor(cv2.imread('tr.jpg'), cv2.COLOR_BGR2RGB),
                                         cv2.cvtColor(cv2.imread('re.jpg'), cv2.COLOR_BGR2RGB)),
                                        axis=1)
@@ -286,22 +292,27 @@ class PlainConvAutoencoderRunner:
         # for m in self.network.modules():
         #     if isinstance(m, nn.BatchNorm2d):
         #         m.track_running_stats = False
-        self.test_batch_loss, test_reconstructed, latent_features, losses = [], [], [], []
+        self.test_batch_loss, self.test_batch_kld, test_reconstructed, latent_features, losses = [], [], [], [], []
 
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
-                test_predictions, test_latent = self.network(audio_data)
+                test_predictions, test_mu, test_log_var = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
-                test_loss = self.loss_function(test_predictions, audio_data)
-                losses.extend(to_numpy(torch.mean(test_loss, dim=[1, 2])))
-                self.test_batch_loss.append(to_numpy(torch.mean(test_loss)))
-
+                test_squared_loss = self.loss_function(test_predictions, audio_data)
+                test_mse_loss = torch.mean(test_squared_loss, dim=[1, 2])
+                test_batch_kld = torch.mean(0.5 * torch.sum(test_log_var.exp() - test_log_var - 1 + test_mu.pow(2)))
+                losses.extend(to_numpy(test_mse_loss))
+                self.test_batch_loss.append(to_numpy(test_squared_loss))
+                self.test_batch_kld.append(to_numpy(test_batch_kld))
         wnb.log({"test_reconstruction_loss": np.mean(self.test_batch_loss)})
+        wnb.log({"test_kld_loss": np.mean(self.test_batch_kld)})
+
         self.logger.info(f'***** {type} Metrics ***** ')
         self.logger.info(
-                f"Loss: {'%.5f' % np.mean(self.test_batch_loss)}")
+                f"Loss: {'%.5f' % np.mean(self.test_batch_loss)} |"
+                f" KLD: {'%.5f' % np.mean(self.test_batch_kld)}")
 
         if epoch % self.network_save_interval == 0:
             one_images, one_losses = self.merge(class_label=1, labels=self.flat_test_labels, data=self.flat_test_data,
