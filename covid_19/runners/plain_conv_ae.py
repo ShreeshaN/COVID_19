@@ -77,7 +77,6 @@ class PlainConvAutoencoderRunner:
         file_utils.create_dirs(paths)
 
         self.network = ConvAutoEncoder().to(self.device)
-        self.pos_weight = None
         self.loss_function = nn.MSELoss(reduction='none')
         self.learning_rate_decay = args.learning_rate_decay
 
@@ -88,7 +87,7 @@ class PlainConvAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -112,27 +111,34 @@ class PlainConvAutoencoderRunner:
         self.logger.info(f'Configs used:\n{json.dumps(args, indent=4)}')
 
     def data_reader(self, data_filepath, data_files, train, should_batch=True, shuffle=True,
-                    infer=False):
+                    infer=False, only_negative_samples=True):
         input_data, labels = [], []
 
-        def split_data(combined_data):
+        def split_data_only_negative(combined_data):
             # pass only negative samples
             idx = [e for e, x in enumerate(combined_data[1]) if x == 0]  #
             return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
-            # return np.array(combined_data[0]), np.array(combined_data[1])
+        def split_data(combined_data):
+            return np.array(combined_data[0]), np.array(combined_data[1])
 
         if infer:
             for file in data_files:
                 self.logger.info('Reading input file ' + file)
                 in_data = read_pkl(data_filepath + file)
-                in_data, out_data = split_data(in_data)
+                if only_negative_samples:
+                    in_data, out_data = split_data_only_negative(in_data)
+                else:
+                    in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
         else:
             for file in data_files:
                 self.logger.info('Reading input file ' + file)
                 in_data = read_pkl(data_filepath + file)
-                in_data, out_data = split_data(in_data)
+                if only_negative_samples:
+                    in_data, out_data = split_data_only_negative(in_data)
+                else:
+                    in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
 
         if train:
@@ -156,12 +162,6 @@ class PlainConvAutoencoderRunner:
                 data = [(x, y) for x, y in zip(input_data, labels)]
                 random.shuffle(data)
                 input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
-
-            # Initialize pos_weight based on training data
-            self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
-                    [x for x in labels if x == 1])
-            self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
-            wnb.config.update({'pos_weight': self.pos_weight})
 
         else:
             split_type = 'test'
@@ -204,9 +204,9 @@ class PlainConvAutoencoderRunner:
     def train(self):
 
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
-                                                    train=True)
+                                                    train=True, only_negative_samples=True)
         test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file], shuffle=False,
-                                                  train=False)
+                                                  train=False, only_negative_samples=True)
 
         # Temporary analysis purpose
         self.flat_train_data = [element for sublist in train_data for element in sublist]
@@ -320,99 +320,33 @@ class PlainConvAutoencoderRunner:
         return [1 if x == -1 else 0 for x in predictions]
 
     def infer(self):
-        # from sklearn import svm
-        # from sklearn.metrics import confusion_matrix
-        # import pickle
-        # self._min, self._max = -80.0, 3.8146973e-06
-        # train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file],
-        #                                             shuffle=False,
-        #                                             train=True)
-        #
-        # test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file],
-        #                                           shuffle=False,
-        #                                           train=False)
-        # train_latent_features, test_latent_features = [], []
-        # with torch.no_grad():
-        #     for i, (audio_data, label) in enumerate(zip(train_data, train_labels)):
-        #         audio_data = to_tensor(audio_data, device=self.device)
-        #         _, train_latent = self.network(audio_data)
-        #         train_latent_features.extend(to_numpy(train_latent.squeeze(1)))
-        # pickle.dump(train_latent_features,
-        #             open('forced_train_latent.npy', 'wb'))
-        #
-        # oneclass_svm = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
-        # oneclass_svm.fit(train_latent_features)
-        # oneclass_predictions = oneclass_svm.predict(train_latent_features)
-        # masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
-        # train_metrics = accuracy_fn(to_tensor(masked_predictions),
-        #                             to_tensor([element for sublist in train_labels for element in sublist]),
-        #                             threshold=self.threshold)
-        # train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
-        # self.logger.info(f'***** Train Metrics ***** ')
-        # self.logger.info(
-        #         f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
-        #         f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
-        #         f"| Precision:{'%.5f' % train_metrics['train_precision']} "
-        #         f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
-        # self.logger.info('Train Confusion matrix - \n' + str(
-        #         confusion_matrix([element for sublist in train_labels for element in sublist], masked_predictions)))
-        #
-        # # Test
-        # with torch.no_grad():
-        #     for i, (audio_data, label) in enumerate(zip(test_data, test_labels)):
-        #         audio_data = to_tensor(audio_data, device=self.device)
-        #         _, test_latent = self.network(audio_data)
-        #         test_latent_features.extend(to_numpy(test_latent.squeeze(1)))
-        # pickle.dump(test_latent_features,
-        #             open('forced_test_latent.npy', 'wb'))
-        #
-        # oneclass_predictions = oneclass_svm.predict(test_latent_features)
-        # masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
-        # test_metrics = accuracy_fn(to_tensor(masked_predictions),
-        #                            to_tensor([element for sublist in test_labels for element in sublist]),
-        #                            threshold=self.threshold)
-        # test_metrics = {'test_' + k: v for k, v in test_metrics.items()}
-        # self.logger.info(f'***** Test Metrics ***** ')
-        # self.logger.info(
-        #         f"Accuracy: {'%.5f' % test_metrics['test_accuracy']} "
-        #         f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
-        #         f"| Precision:{'%.5f' % test_metrics['test_precision']} "
-        #         f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
-        # self.logger.info('Test Confusion matrix - \n' + str(
-        #         confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
-
-        # ------------------------------------------------------------------------------------------------------------------------
         from sklearn import svm
-        from sklearn.ensemble import IsolationForest
         from sklearn.metrics import confusion_matrix
-        import pickle as pk
-        train_labels, test_labels = pk.load(open(
-                '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_train_data_fbank_cough-shallow_labels.pkl',
-                'rb')), pk.load(open(
-                '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
-                'rb'))
-        train_latent_features, test_latent_features = pk.load(
-                open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_train_latent.npy',
-                     'rb')), pk.load(
-                open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_test_latent.npy', 'rb'))
-        # for x, y in zip(train_latent_features, train_labels):
-        #     if y == 0:
-        #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
-        # for x, y in zip(train_latent_features, train_labels):
-        #     if y == 1:
-        #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
-        #
-        # exit()
-        self.logger.info(
-                'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
-        self.logger.info(
-                'Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
-        # oneclass_svm = svm.OneClassSVM(kernel="rbf")
-        oneclass_svm = IsolationForest(random_state=0)
+        import pickle
+        # self._min, self._max = -80.0, 3.8146973e-06
+        train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file],
+                                                    shuffle=False,
+                                                    train=True, only_negative_samples=False)
+
+        test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file],
+                                                  shuffle=False,
+                                                  train=False, only_negative_samples=False)
+        train_latent_features, test_latent_features = [], []
+        with torch.no_grad():
+            for i, (audio_data, label) in enumerate(zip(train_data, train_labels)):
+                audio_data = to_tensor(audio_data, device=self.device)
+                _, train_latent = self.network(audio_data)
+                train_latent_features.extend(to_numpy(train_latent.squeeze(1)))
+        pickle.dump(train_latent_features,
+                    open('forced_train_latent.npy', 'wb'))
+
+        oneclass_svm = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
         oneclass_svm.fit(train_latent_features)
         oneclass_predictions = oneclass_svm.predict(train_latent_features)
         masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
-        train_metrics = accuracy_fn(to_tensor(masked_predictions), to_tensor(train_labels), threshold=self.threshold)
+        train_metrics = accuracy_fn(to_tensor(masked_predictions),
+                                    to_tensor([element for sublist in train_labels for element in sublist]),
+                                    threshold=self.threshold)
         train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
         self.logger.info(f'***** Train Metrics ***** ')
         self.logger.info(
@@ -420,11 +354,23 @@ class PlainConvAutoencoderRunner:
                 f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
                 f"| Precision:{'%.5f' % train_metrics['train_precision']} "
                 f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
-        self.logger.info('Train Confusion matrix - \n' + str(confusion_matrix(train_labels, masked_predictions)))
+        self.logger.info('Train Confusion matrix - \n' + str(
+                confusion_matrix([element for sublist in train_labels for element in sublist], masked_predictions)))
+
         # Test
+        with torch.no_grad():
+            for i, (audio_data, label) in enumerate(zip(test_data, test_labels)):
+                audio_data = to_tensor(audio_data, device=self.device)
+                _, test_latent = self.network(audio_data)
+                test_latent_features.extend(to_numpy(test_latent.squeeze(1)))
+        pickle.dump(test_latent_features,
+                    open('forced_test_latent.npy', 'wb'))
+
         oneclass_predictions = oneclass_svm.predict(test_latent_features)
         masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
-        test_metrics = accuracy_fn(to_tensor(masked_predictions), to_tensor(test_labels), threshold=self.threshold)
+        test_metrics = accuracy_fn(to_tensor(masked_predictions),
+                                   to_tensor([element for sublist in test_labels for element in sublist]),
+                                   threshold=self.threshold)
         test_metrics = {'test_' + k: v for k, v in test_metrics.items()}
         self.logger.info(f'***** Test Metrics ***** ')
         self.logger.info(
@@ -432,4 +378,58 @@ class PlainConvAutoencoderRunner:
                 f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
                 f"| Precision:{'%.5f' % test_metrics['test_precision']} "
                 f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
-        self.logger.info('Test Confusion matrix - \n' + str(confusion_matrix(test_labels, masked_predictions)))
+        self.logger.info('Test Confusion matrix - \n' + str(
+                confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
+
+        # ------------------------------------------------------------------------------------------------------------------------
+        # from sklearn import svm
+        # from sklearn.ensemble import IsolationForest
+        # from sklearn.metrics import confusion_matrix
+        # import pickle as pk
+        # train_labels, test_labels = pk.load(open(
+        #         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_train_data_fbank_cough-shallow_labels.pkl',
+        #         'rb')), pk.load(open(
+        #         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
+        #         'rb'))
+        # train_latent_features, test_latent_features = pk.load(
+        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_train_latent.npy',
+        #              'rb')), pk.load(
+        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_test_latent.npy', 'rb'))
+        # # for x, y in zip(train_latent_features, train_labels):
+        # #     if y == 0:
+        # #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
+        # # for x, y in zip(train_latent_features, train_labels):
+        # #     if y == 1:
+        # #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
+        # #
+        # # exit()
+        # self.logger.info(
+        #         'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
+        # self.logger.info(
+        #         'Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
+        # # oneclass_svm = svm.OneClassSVM(kernel="rbf")
+        # oneclass_svm = IsolationForest(random_state=0)
+        # oneclass_svm.fit(train_latent_features)
+        # oneclass_predictions = oneclass_svm.predict(train_latent_features)
+        # masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
+        # train_metrics = accuracy_fn(to_tensor(masked_predictions), to_tensor(train_labels), threshold=self.threshold)
+        # train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
+        # self.logger.info(f'***** Train Metrics ***** ')
+        # self.logger.info(
+        #         f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
+        #         f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
+        #         f"| Precision:{'%.5f' % train_metrics['train_precision']} "
+        #         f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
+        # self.logger.info('Train Confusion matrix - \n' + str(confusion_matrix(train_labels, masked_predictions)))
+        # # Test
+        # oneclass_predictions = oneclass_svm.predict(test_latent_features)
+        # masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
+        # test_metrics = accuracy_fn(to_tensor(masked_predictions), to_tensor(test_labels), threshold=self.threshold)
+        # test_metrics = {'test_' + k: v for k, v in test_metrics.items()}
+        # self.logger.info(f'***** Test Metrics ***** ')
+        # self.logger.info(
+        #         f"Accuracy: {'%.5f' % test_metrics['test_accuracy']} "
+        #         f"| UAR: {'%.5f' % test_metrics['test_uar']}| F1:{'%.5f' % test_metrics['test_f1']} "
+        #         f"| Precision:{'%.5f' % test_metrics['test_precision']} "
+        #         f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
+        # self.logger.info('Test Confusion matrix - \n' + str(confusion_matrix(test_labels, masked_predictions)))

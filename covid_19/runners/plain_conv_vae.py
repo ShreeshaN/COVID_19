@@ -77,7 +77,6 @@ class PlainConvVariationalAutoencoderRunner:
         file_utils.create_dirs(paths)
 
         self.network = ConvVariationalAutoEncoder().to(self.device)
-        self.pos_weight = None
         self.loss_function = nn.MSELoss(reduction='none')
         self.learning_rate_decay = args.learning_rate_decay
 
@@ -156,13 +155,6 @@ class PlainConvVariationalAutoencoderRunner:
                 data = [(x, y) for x, y in zip(input_data, labels)]
                 random.shuffle(data)
                 input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
-
-            # Initialize pos_weight based on training data
-            self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
-                    [x for x in labels if x == 1])
-            self.logger.info(f'Pos weight for the train data - {self.pos_weight}')
-            wnb.config.update({'pos_weight': self.pos_weight})
-
         else:
             split_type = 'test'
 
