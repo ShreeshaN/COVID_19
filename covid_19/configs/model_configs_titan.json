@@ -13,6 +13,7 @@
   "tensorboard_summary_path": "tensorboard_summary",
   "network_restore_path": "",
   "normalise_while_training": true,
+  "randomize_data": false,
   "num_classes": 1,
   "network_save_interval": 3,
   "display_interval": 5,

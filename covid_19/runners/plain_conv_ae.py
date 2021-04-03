@@ -49,6 +49,7 @@ class PlainConvAutoencoderRunner:
         self.train_net = args.train_net
         self.batch_size = args.batch_size
         self.num_classes = args.num_classes
+        self.randomize_data = args.randomize_data
         if args.data_source == 'mit':
             self.data_read_path = args.mit_data_save_path
         elif args.data_source == 'coswara':
@@ -87,7 +88,7 @@ class PlainConvAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  #
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -116,8 +117,10 @@ class PlainConvAutoencoderRunner:
 
         def split_data(combined_data):
             # pass only negative samples
-            idx = [e for e, x in enumerate(combined_data[1])] #  if x == 0
-            return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
+            # idx = [e for e, x in enumerate(combined_data[1])] #  if x == 0
+            # return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
+
+            return np.array(combined_data[0]), np.array(combined_data[1])
 
         if infer:
             for file in data_files:
@@ -149,9 +152,10 @@ class PlainConvAutoencoderRunner:
                      'raw_' + split_type + '_mean': str(self._mean),
                      'raw_' + split_type + '_std': str(self._std)})
 
-            data = [(x, y) for x, y in zip(input_data, labels)]
-            random.shuffle(data)
-            input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
+            if self.randomize_data:
+                data = [(x, y) for x, y in zip(input_data, labels)]
+                random.shuffle(data)
+                input_data, labels = np.array([x[0] for x in data]), [x[1] for x in data]
 
             # Initialize pos_weight based on training data
             self.pos_weight = len([x for x in labels if x == 0]) / 1 if sum(labels) == 0 else len(
@@ -316,7 +320,6 @@ class PlainConvAutoencoderRunner:
         return [1 if x == -1 else 0 for x in predictions]
 
     def infer(self):
-        pass
         from sklearn import svm
         from sklearn.metrics import confusion_matrix
         import pickle
@@ -376,8 +379,11 @@ class PlainConvAutoencoderRunner:
                 f"| Precision:{'%.5f' % test_metrics['test_precision']} "
                 f"| Recall:{'%.5f' % test_metrics['test_recall']} | AUC:{'%.5f' % test_metrics['test_auc']}")
         self.logger.info('Test Confusion matrix - \n' + str(
-            confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
+                confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
+
+        # ------------------------------------------------------------------------------------------------------------------------
         # from sklearn import svm
+        # from sklearn.ensemble import IsolationForest
         # from sklearn.metrics import confusion_matrix
         # import pickle as pk
         # train_labels, test_labels = pk.load(open(
@@ -386,13 +392,23 @@ class PlainConvAutoencoderRunner:
         #         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
         #         'rb'))
         # train_latent_features, test_latent_features = pk.load(
-        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/train_latent.npy', 'rb')), pk.load(
-        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/test_latent.npy', 'rb'))
+        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_train_latent.npy',
+        #              'rb')), pk.load(
+        #         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/forced_test_latent.npy', 'rb'))
+        # # for x, y in zip(train_latent_features, train_labels):
+        # #     if y == 0:
+        # #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
+        # # for x, y in zip(train_latent_features, train_labels):
+        # #     if y == 1:
+        # #         print('Mean: ', np.mean(x), ' Std: ', np.std(x), ' | Label: ', y)
+        # #
+        # # exit()
         # self.logger.info(
-        #     'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
+        #         'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
         # self.logger.info(
-        #     'Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
-        # oneclass_svm = svm.OneClassSVM(kernel="rbf")
+        #         'Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
+        # # oneclass_svm = svm.OneClassSVM(kernel="rbf")
+        # oneclass_svm = IsolationForest(random_state=0)
         # oneclass_svm.fit(train_latent_features)
         # oneclass_predictions = oneclass_svm.predict(train_latent_features)
         # masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)
