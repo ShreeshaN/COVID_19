@@ -135,7 +135,7 @@ class ConvVariationalAutoEncoder(nn.Module):
         z = self.reparameterize(mu, log_var)
         reconstructed_x = self.decoder(z, self.encoder.pool1_indices, self.encoder.pool2_indices,
                                        out_size=x.unsqueeze(1).size())
-        return reconstructed_x, mu, log_var
+        return reconstructed_x, mu, log_var, z
 
     def sample(self, n):
         z = torch.randn((n, flattened_size))

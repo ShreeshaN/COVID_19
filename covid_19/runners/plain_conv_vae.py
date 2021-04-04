@@ -223,7 +223,7 @@ class PlainConvVariationalAutoencoderRunner:
                 self.optimiser.zero_grad()
 
                 audio_data = to_tensor(audio_data, device=self.device)
-                predictions, mu, log_var = self.network(audio_data)
+                predictions, mu, log_var, _ = self.network(audio_data)
                 predictions = predictions.squeeze(1)
                 train_reconstructed.extend(to_numpy(predictions))
                 squared_loss = self.loss_function(predictions, audio_data)
@@ -296,7 +296,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
-                test_predictions, test_mu, test_log_var = self.network(audio_data)
+                test_predictions, test_mu, test_log_var, _ = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
                 test_squared_loss = self.loss_function(test_predictions, audio_data)
@@ -345,7 +345,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(train_data, train_labels)):
                 audio_data = to_tensor(audio_data, device=self.device)
-                _, train_latent = self.network(audio_data)
+                _, _, _, train_latent = self.network(audio_data)
                 train_latent_features.extend(to_numpy(train_latent.squeeze(1)))
         pickle.dump(train_latent_features,
                     open('vae_forced_train_latent.npy', 'wb'))
@@ -371,7 +371,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(test_data, test_labels)):
                 audio_data = to_tensor(audio_data, device=self.device)
-                _, test_latent = self.network(audio_data)
+                _, _, _, test_latent = self.network(audio_data)
                 test_latent_features.extend(to_numpy(test_latent.squeeze(1)))
         pickle.dump(test_latent_features,
                     open('vae_forced_test_latent.npy', 'wb'))
