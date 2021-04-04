@@ -1,5 +1,5 @@
 {
-  "run_name": "plain_conv_VAE",
+  "run_name": "plain_conv_VAE_128_nodes",
   "wnb_tag": [
     "forced_conv_VAE"
   ],
