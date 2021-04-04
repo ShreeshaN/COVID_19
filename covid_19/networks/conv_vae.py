@@ -16,7 +16,7 @@ import torch
 from torch import tensor
 
 flattened_size = 32 * 9 * 40  # 32 filters each of size 9*40 - reduced from a input size of 40*690 
-mu_layer_nodes = 1024
+mu_layer_nodes = 128
 
 
 class ConvEncoder(nn.Module):
