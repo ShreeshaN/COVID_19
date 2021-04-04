@@ -1,7 +1,7 @@
 {
-  "run_name": "plain_conv_AE",
+  "run_name": "plain_conv_VAE",
   "wnb_tag": [
-    "forced_conv_AE"
+    "forced_conv_VAE"
   ],
   "epochs": 500,
   "batch_size": 32,

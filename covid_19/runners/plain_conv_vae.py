@@ -87,7 +87,7 @@ class PlainConvVariationalAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  #
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  #
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -111,27 +111,34 @@ class PlainConvVariationalAutoencoderRunner:
         self.logger.info(f'Configs used:\n{json.dumps(args, indent=4)}')
 
     def data_reader(self, data_filepath, data_files, train, should_batch=True, shuffle=True,
-                    infer=False):
+                    infer=False, only_negative_samples=True):
         input_data, labels = [], []
 
-        def split_data(combined_data):
+        def split_data_only_negative(combined_data):
             # pass only negative samples
-            # idx = [e for e, x in enumerate(combined_data[1])] #  if x == 0
-            # return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
+            idx = [e for e, x in enumerate(combined_data[1]) if x == 0]  #
+            return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
-            return np.array(combined_data[0])[:50], np.array(combined_data[1])[:50]
+        def split_data(combined_data):
+            return np.array(combined_data[0]), np.array(combined_data[1])
 
         if infer:
             for file in data_files:
                 self.logger.info('Reading input file ' + file)
                 in_data = read_pkl(data_filepath + file)
-                in_data, out_data = split_data(in_data)
+                if only_negative_samples:
+                    in_data, out_data = split_data_only_negative(in_data)
+                else:
+                    in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
         else:
             for file in data_files:
                 self.logger.info('Reading input file ' + file)
                 in_data = read_pkl(data_filepath + file)
-                in_data, out_data = split_data(in_data)
+                if only_negative_samples:
+                    in_data, out_data = split_data_only_negative(in_data)
+                else:
+                    in_data, out_data = split_data(in_data)
                 input_data.extend(in_data), labels.extend(out_data)
 
         if train:
@@ -196,9 +203,9 @@ class PlainConvVariationalAutoencoderRunner:
     def train(self):
 
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
-                                                    train=True)
+                                                    train=True, only_negative_samples=True)
         test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file], shuffle=False,
-                                                  train=False)
+                                                  train=False, only_negative_samples=True)
 
         # Temporary analysis purpose
         self.flat_train_data = [element for sublist in train_data for element in sublist]

@@ -16,6 +16,7 @@ import torch
 from torch import tensor
 
 flattened_size = 32 * 9 * 40  # 32 filters each of size 9*40 - reduced from a input size of 40*690 
+mu_layer_nodes = 1024
 
 
 class ConvEncoder(nn.Module):
@@ -39,8 +40,8 @@ class ConvEncoder(nn.Module):
         self.conv5_bn = nn.BatchNorm2d(32)
         self.pool1_indices = None
         self.pool2_indices = None
-        self.fc_mu = nn.Linear(flattened_size, flattened_size)
-        self.fc_var = nn.Linear(flattened_size, flattened_size)
+        self.fc_mu = nn.Linear(flattened_size, mu_layer_nodes)
+        self.fc_var = nn.Linear(flattened_size, mu_layer_nodes)
 
     def forward(self, x):
         x = x.unsqueeze(1)
@@ -71,6 +72,7 @@ class ConvEncoder(nn.Module):
 class ConvDecoder(nn.Module):
     def __init__(self):
         super(ConvDecoder, self).__init__()
+        self.decoder_linear = nn.Linear(mu_layer_nodes, flattened_size)
         self.decoder1 = nn.ConvTranspose2d(in_channels=32, out_channels=128, kernel_size=3, stride=[1, 2])
         self.decoder1_bn = nn.BatchNorm2d(128)
         self.unpool1 = nn.MaxUnpool2d(4, stride=1)
@@ -85,6 +87,7 @@ class ConvDecoder(nn.Module):
         self.decoder5_bn = nn.BatchNorm2d(1)
 
     def forward(self, x, pool1_indices, pool2_indices, out_size):
+        x = self.decoder_linear(x)
         x = x.view(x.size(0), 32, 9, 40)
         decoder_op1 = F.relu(self.decoder1_bn(self.decoder1(x)))  # , output_size=encoder_op4_pool.size()
         # print('decoder1', decoder_op1.size())
