@@ -232,7 +232,7 @@ class PlainConvVariationalAutoencoderRunner:
                 train_losses.extend(to_numpy(mse_loss))
                 torch.mean(mse_loss + kld_loss).backward()
                 self.optimiser.step()
-                self.batch_loss.append(to_numpy(torch.mean(squared_loss)))
+                self.batch_loss.append(to_numpy(mse_loss))
                 self.batch_kld.append(to_numpy(kld_loss))
 
             self.logger.info('***** Overall Train Metrics ***** ')
@@ -303,7 +303,7 @@ class PlainConvVariationalAutoencoderRunner:
                 test_mse_loss = torch.mean(test_squared_loss, dim=[1, 2])
                 test_batch_kld = torch.mean(0.5 * torch.sum(test_log_var.exp() - test_log_var - 1 + test_mu.pow(2)))
                 losses.extend(to_numpy(test_mse_loss))
-                self.test_batch_loss.append(to_numpy(test_squared_loss))
+                self.test_batch_loss.append(to_numpy(test_mse_loss))
                 self.test_batch_kld.append(to_numpy(test_batch_kld))
         wnb.log({"test_reconstruction_loss": np.mean(self.test_batch_loss)})
         wnb.log({"test_kld_loss": np.mean(self.test_batch_kld)})
