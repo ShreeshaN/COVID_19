@@ -20,7 +20,7 @@
   "dropout": 0.2,
   "mit_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/covid_mit_data/",
   "coswara_data_save_path": "/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/",
-  "network_restore_path": "/home/snarasimhamurthy/git/COVID_19/slurm_scripts/results/plain_conv_AE_coswara_train_data_fbank_cough-shallow_1617485401/covid19_trained_models/plain_conv_AE_coswara_train_data_fbank_cough-shallow_1617485401_360.pt",
+  "network_restore_path": "/home/snarasimhamurthy/git/COVID_19/slurm_scripts/results/plain_conv_VAE_coswara_train_data_fbank_cough-shallow_1617561393/covid19_trained_models/plain_conv_VAE_coswara_train_data_fbank_cough-shallow_1617561393_498.pt",
   "debug_filename": "predictions_debug.npy",
   "use_gpu": false,
   "wandb": "",
