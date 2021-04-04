@@ -87,7 +87,7 @@ class PlainConvVariationalAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  #
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -228,11 +228,11 @@ class PlainConvVariationalAutoencoderRunner:
                 train_reconstructed.extend(to_numpy(predictions))
                 squared_loss = self.loss_function(predictions, audio_data)
                 kld_loss = torch.mean(0.5 * torch.sum(log_var.exp() - log_var - 1 + mu.pow(2)))
-                mse_loss = torch.mean(squared_loss, dim=[1, 2])
+                mse_loss = torch.mean(squared_loss, dim=[1, 2])  # Loss per sample in the batch
                 train_losses.extend(to_numpy(mse_loss))
-                torch.mean(mse_loss + kld_loss).backward()
+                torch.mean(mse_loss).add(kld_loss).backward()
                 self.optimiser.step()
-                self.batch_loss.append(to_numpy(mse_loss))
+                self.batch_loss.append(to_numpy(torch.mean(mse_loss)))
                 self.batch_kld.append(to_numpy(kld_loss))
 
             self.logger.info('***** Overall Train Metrics ***** ')
@@ -300,10 +300,10 @@ class PlainConvVariationalAutoencoderRunner:
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
                 test_squared_loss = self.loss_function(test_predictions, audio_data)
-                test_mse_loss = torch.mean(test_squared_loss, dim=[1, 2])
+                test_mse_loss = torch.mean(test_squared_loss, dim=[1, 2]) # Loss per sample in the batch
                 test_batch_kld = torch.mean(0.5 * torch.sum(test_log_var.exp() - test_log_var - 1 + test_mu.pow(2)))
                 losses.extend(to_numpy(test_mse_loss))
-                self.test_batch_loss.append(to_numpy(test_mse_loss))
+                self.test_batch_loss.append(to_numpy(torch.mean(test_mse_loss)))
                 self.test_batch_kld.append(to_numpy(test_batch_kld))
         wnb.log({"test_reconstruction_loss": np.mean(self.test_batch_loss)})
         wnb.log({"test_kld_loss": np.mean(self.test_batch_kld)})
