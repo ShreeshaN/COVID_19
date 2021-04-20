@@ -121,7 +121,7 @@ import numpy as np
 import math
 from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
 import random
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 random.seed(1)
 
@@ -133,15 +133,16 @@ def data_read(data_path):
         return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
     def split_data(combined_data):
-        zero_idx = [i for i, x in enumerate(combined_data[1]) if x == 0]
-        ones_idx = [i for i, x in enumerate(combined_data[1]) if x == 1]
-        ones_len = len(ones_idx)
-        zero_idx = random.sample(zero_idx, ones_len)
-        combined_data[0] = np.array(combined_data[0])
-        combined_data[1] = np.array(combined_data[1])
-        data = np.concatenate((combined_data[0][ones_idx], combined_data[0][zero_idx])).mean(axis=2)
-        labels = np.concatenate((combined_data[1][ones_idx], combined_data[1][zero_idx]))
-        return data, labels  # np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
+        # zero_idx = [i for i, x in enumerate(combined_data[1]) if x == 0]
+        # ones_idx = [i for i, x in enumerate(combined_data[1]) if x == 1]
+        # ones_len = len(ones_idx)
+        # zero_idx = random.sample(zero_idx, ones_len)
+        # combined_data[0] = np.array(combined_data[0])
+        # combined_data[1] = np.array(combined_data[1])
+        # data = np.concatenate((combined_data[0][ones_idx], combined_data[0][zero_idx])).mean(axis=2)
+        # labels = np.concatenate((combined_data[1][ones_idx], combined_data[1][zero_idx]))
+        # return data, labels  # np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
+        return np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
 
     data = pk.load(open(data_path, 'rb'))
     data, labels = split_data(data)
@@ -185,12 +186,12 @@ print('Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' 
 print('Train Features shape ', train_features.shape)
 print('Test Features shape ', test_features.shape)
 
-for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
+for kernel_ in ["poly", "rbf"]:
     print('***********************************', kernel_, '***********************************')
     k = 5
-    kf = KFold(n_splits=k, random_state=None)
+    kf = StratifiedKFold(n_splits=k, random_state=None, shuffle=False)
     model = svm.SVC(kernel=kernel_, gamma='auto')
-    for e, (train_idx, test_idx) in enumerate(kf.split(train_features)):
+    for e, (train_idx, test_idx) in enumerate(kf.split(train_features, train_labels)):
         print(' ---------- KFOLD ', e)
         tr_features, tr_labels = train_features[train_idx], train_labels[train_idx]
         te_features, te_labels = train_features[test_idx], train_labels[test_idx]
