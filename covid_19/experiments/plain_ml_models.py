@@ -193,7 +193,7 @@ for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
     for e, (train_idx, test_idx) in enumerate(kf.split(train_features)):
         print(' ---------- KFOLD ', e)
         tr_features, tr_labels = train_features[train_idx], train_labels[train_idx]
-        te_features, te_labels = test_features[test_idx], test_labels[test_idx]
+        te_features, te_labels = train_features[test_idx], train_features[test_idx]
         model.fit(tr_features, tr_labels)
         predictions = model.predict(tr_features)
         train_metrics = accuracy_fn(predictions, tr_labels, threshold=threshold)
@@ -206,6 +206,18 @@ for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
                 f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
         print('Train Confusion matrix - \n' + str(confusion_matrix(tr_labels, predictions)))
 
+        val_predictions = model.predict(te_features)
+        val_metrics = accuracy_fn(val_predictions, te_labels, threshold=threshold)
+        val_metrics = {'val_' + k: v for k, v in train_metrics.items()}
+        print(f'***** Val Metrics ***** ')
+        print(
+                f"Accuracy: {'%.5f' % val_metrics['val_accuracy']} "
+                f"| UAR: {'%.5f' % val_metrics['val_uar']}| F1:{'%.5f' % val_metrics['val_f1']} "
+                f"| Precision:{'%.5f' % val_metrics['val_precision']} "
+                f"| Recall:{'%.5f' % val_metrics['val_recall']} | AUC:{'%.5f' % val_metrics['val_auc']}")
+        print('Train Confusion matrix - \n' + str(confusion_matrix(te_labels, val_predictions)))
+
+    print('Final test results')
     # Test
     predictions = model.predict(test_features)
     test_metrics = accuracy_fn(predictions, test_labels, threshold=threshold)
