@@ -121,6 +121,7 @@ import numpy as np
 import math
 from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
 import random
+from sklearn.model_selection import KFold
 
 random.seed(1)
 
@@ -138,7 +139,7 @@ def data_read(data_path):
         zero_idx = random.sample(zero_idx, ones_len)
         combined_data[0] = np.array(combined_data[0])
         combined_data[1] = np.array(combined_data[1])
-        data = np.concatenate((combined_data[0][ones_idx], combined_data[0][zero_idx]))
+        data = np.concatenate((combined_data[0][ones_idx], combined_data[0][zero_idx])).mean(axis=2)
         labels = np.concatenate((combined_data[1][ones_idx], combined_data[1][zero_idx]))
         return data, labels  # np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
 
@@ -186,18 +187,24 @@ print('Test Features shape ', test_features.shape)
 
 for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
     print('***********************************', kernel_, '***********************************')
+    k = 5
+    kf = KFold(n_splits=k, random_state=None)
     model = svm.SVC(kernel=kernel_, gamma='auto')
-    model.fit(train_features, train_labels)
-    predictions = model.predict(train_features)
-    train_metrics = accuracy_fn(predictions, train_labels, threshold=threshold)
-    train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
-    print(f'***** Train Metrics ***** ')
-    print(
-            f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
-            f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
-            f"| Precision:{'%.5f' % train_metrics['train_precision']} "
-            f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
-    print('Train Confusion matrix - \n' + str(confusion_matrix(train_labels, predictions)))
+    for e, (train_idx, test_idx) in enumerate(kf.split(train_features)):
+        print(' ---------- KFOLD ', e)
+        tr_features, tr_labels = train_features[train_idx], train_labels[train_idx]
+        te_features, te_labels = test_features[test_idx], test_labels[test_idx]
+        model.fit(tr_features, tr_labels)
+        predictions = model.predict(tr_features)
+        train_metrics = accuracy_fn(predictions, tr_labels, threshold=threshold)
+        train_metrics = {'train_' + k: v for k, v in train_metrics.items()}
+        print(f'***** Train Metrics ***** ')
+        print(
+                f"Accuracy: {'%.5f' % train_metrics['train_accuracy']} "
+                f"| UAR: {'%.5f' % train_metrics['train_uar']}| F1:{'%.5f' % train_metrics['train_f1']} "
+                f"| Precision:{'%.5f' % train_metrics['train_precision']} "
+                f"| Recall:{'%.5f' % train_metrics['train_recall']} | AUC:{'%.5f' % train_metrics['train_auc']}")
+        print('Train Confusion matrix - \n' + str(confusion_matrix(tr_labels, predictions)))
 
     # Test
     predictions = model.predict(test_features)
