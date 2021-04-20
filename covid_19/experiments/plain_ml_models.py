@@ -193,7 +193,7 @@ for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
     for e, (train_idx, test_idx) in enumerate(kf.split(train_features)):
         print(' ---------- KFOLD ', e)
         tr_features, tr_labels = train_features[train_idx], train_labels[train_idx]
-        te_features, te_labels = train_features[test_idx], train_features[test_idx]
+        te_features, te_labels = train_features[test_idx], train_labels[test_idx]
         model.fit(tr_features, tr_labels)
         predictions = model.predict(tr_features)
         train_metrics = accuracy_fn(predictions, tr_labels, threshold=threshold)
