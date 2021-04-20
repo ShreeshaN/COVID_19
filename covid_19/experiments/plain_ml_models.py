@@ -172,10 +172,10 @@ def accuracy_fn(preds, labels, threshold):
 
 
 threshold = 0.5
-labels_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
-data_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
-# labels_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
-# data_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
+# labels_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
+# data_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
+labels_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
+data_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
 
 train_features, train_labels = data_read(data_path + 'coswara_train_data_fbank_cough-shallow.pkl')
 test_features, test_labels = data_read(data_path + 'coswara_test_data_fbank_cough-shallow.pkl')
