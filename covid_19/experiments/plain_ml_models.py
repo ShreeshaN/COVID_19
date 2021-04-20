@@ -208,7 +208,7 @@ for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
 
         val_predictions = model.predict(te_features)
         val_metrics = accuracy_fn(val_predictions, te_labels, threshold=threshold)
-        val_metrics = {'val_' + k: v for k, v in train_metrics.items()}
+        val_metrics = {'val_' + k: v for k, v in val_metrics.items()}
         print(f'***** Val Metrics ***** ')
         print(
                 f"Accuracy: {'%.5f' % val_metrics['val_accuracy']} "
