@@ -120,6 +120,7 @@ import pickle as pk
 import numpy as np
 import math
 from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
+from imblearn.over_sampling import SMOTE
 import random
 from sklearn.model_selection import KFold, StratifiedKFold
 
@@ -185,6 +186,12 @@ print('Total train data len: ' + str(len(train_labels)) + ' | Positive samples: 
 print('Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
 print('Train Features shape ', train_features.shape)
 print('Test Features shape ', test_features.shape)
+
+oversample = SMOTE()
+train_features, train_labels = oversample.fit_resample(train_features, train_labels)
+print('After Up sampling')
+print('Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
+print('Train Features shape ', train_features.shape)
 
 for kernel_ in ["poly", "rbf"]:
     print('***********************************', kernel_, '***********************************')
