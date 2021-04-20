@@ -35,7 +35,7 @@ def data_read(data_path):
         return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
     def split_data(combined_data):
-        return np.array(combined_data[0]), np.array(combined_data[1])
+        return np.array(combined_data[0]).mean(axis=1), np.array(combined_data[1])
 
     data = pk.load(open(data_path, 'rb'))
     data, labels = split_data(data)
@@ -76,6 +76,8 @@ test_features, test_labels = data_read(data_path + 'coswara_test_data_fbank_coug
 
 print('Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
 print('Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
+print('Train Features shape ', train_features.shape)
+print('Test Features shape ', test_features.shape)
 
 for kernel_ in ["linear", "poly", "rbf", "sigmoid"]:
     print('***********************************', kernel_, '***********************************')
