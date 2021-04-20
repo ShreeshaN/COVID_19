@@ -120,6 +120,9 @@ import pickle as pk
 import numpy as np
 import math
 from sklearn.metrics import recall_score, precision_recall_fscore_support, roc_curve, auc
+import random
+
+random.seed(1)
 
 
 def data_read(data_path):
@@ -129,7 +132,15 @@ def data_read(data_path):
         return np.array(combined_data[0])[[idx]], np.array(combined_data[1])[[idx]]
 
     def split_data(combined_data):
-        return np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
+        zero_idx = [i for i, x in enumerate(combined_data[1]) if x == 0]
+        ones_idx = [i for i, x in enumerate(combined_data[1]) if x == 1]
+        ones_len = len(ones_idx)
+        zero_idx = random.sample(zero_idx, ones_len)
+        combined_data[0] = np.array(combined_data[0])
+        combined_data[1] = np.array(combined_data[1])
+        data = np.concatenate((combined_data[0][ones_idx], combined_data[0][zero_idx]))
+        labels = np.concatenate((combined_data[1][ones_idx], combined_data[1][zero_idx]))
+        return data, labels  # np.array(combined_data[0]).mean(axis=2), np.array(combined_data[1])
 
     data = pk.load(open(data_path, 'rb'))
     data, labels = split_data(data)
@@ -160,10 +171,10 @@ def accuracy_fn(preds, labels, threshold):
 
 
 threshold = 0.5
-# labels_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
-# data_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
-labels_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
-data_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
+labels_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
+data_path = '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/'
+# labels_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
+# data_path = '/home/snarasimhamurthy/COVID_DATASET/Coswara-Data/Extracted_data/'
 
 train_features, train_labels = data_read(data_path + 'coswara_train_data_fbank_cough-shallow.pkl')
 test_features, test_labels = data_read(data_path + 'coswara_test_data_fbank_cough-shallow.pkl')
