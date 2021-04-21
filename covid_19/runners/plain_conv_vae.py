@@ -43,10 +43,11 @@ class ContrastiveLoss(nn.Module):
     Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
     """
 
-    def __init__(self, margin):
+    def __init__(self, margin, zero):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
         self.eps = 1e-9
+        self.zero = zero
 
     def forward(self, output1, output2, target, size_average=True):
         # distances = (output2 - output1).pow(2).sum(1)  # squared distances
@@ -55,7 +56,7 @@ class ContrastiveLoss(nn.Module):
         # return torch.mean(losses, dim=1) if size_average else losses
         losses = torch.sum(
                 torch.max(target * (torch.sqrt(torch.sum(torch.square(output2 - output1), dim=-1)) - 1),
-                          torch.tensor(0.0)),
+                          self.zero),
                 dim=-1)
         return losses
 
@@ -101,7 +102,7 @@ class PlainConvVariationalAutoencoderRunner:
         file_utils.create_dirs(paths)
 
         self.network = ConvVariationalAutoEncoder().to(self.device)
-        self.loss_function = ContrastiveLoss(margin=1.)
+        self.loss_function = ContrastiveLoss(margin=1., zero=to_tensor(0, device=self.device))
         self.learning_rate_decay = args.learning_rate_decay
 
         self.optimiser = optim.Adam(self.network.parameters(), lr=self.learning_rate)
@@ -111,7 +112,7 @@ class PlainConvVariationalAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  #  , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
