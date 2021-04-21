@@ -241,6 +241,7 @@ class PlainConvVariationalAutoencoderRunner:
                     zip(train_data, train_labels)):
                 self.optimiser.zero_grad()
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = [1 if x == 0 else -1 for x in label]
                 label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 predictions, mu, log_var, _ = self.network(audio_data)
                 predictions = predictions.squeeze(1)
@@ -316,6 +317,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = [1 if x == 0 else -1 for x in label]
                 label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 test_predictions, test_mu, test_log_var, _ = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
@@ -371,7 +373,7 @@ class PlainConvVariationalAutoencoderRunner:
         pickle.dump(train_latent_features,
                     open('vae_forced_train_latent.npy', 'wb'))
 
-        oneclass_svm = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+        oneclass_svm = svm.OneClassSVM(nu=0.1, kernel="poly", gamma=0.1)
         oneclass_svm.fit(train_latent_features)
         oneclass_predictions = oneclass_svm.predict(train_latent_features)
         masked_predictions = self.mask_preds_for_one_class(oneclass_predictions)

@@ -34,17 +34,25 @@ train_labels, test_labels = pk.load(open(
         'rb')), pk.load(open(
         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
         'rb'))
-train_latent_features, test_latent_features = pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_train_latent.npy',
-             'rb')), pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_test_latent.npy', 'rb'))
+train_latent_features, test_latent_features = np.array(pk.load(
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_train_latent_contrastive.npy',
+             'rb'))), np.array(pk.load(
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_test_latent_contrastive.npy',
+             'rb')))
 print(
         'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
 print(
         'Total test data len: ' + str(len(test_labels)) + ' | Positive samples: ' + str(sum(test_labels)))
-# model = svm.OneClassSVM(kernel="rbf")
+# exit()
+
+ones_idx = [i for i, x in enumerate(train_labels) if x == 1]
+zeros_idx = [i for i, x in enumerate(train_labels) if x == 0]
+print(train_latent_features[ones_idx].mean(), train_latent_features[ones_idx].std())
+print(train_latent_features[zeros_idx].mean(), train_latent_features[zeros_idx].std())
+# exit()
+# model = svm.OneClassSVM(kernel="poly")
 # oneclass_svm = IsolationForest(random_state=0)
-model = EllipticEnvelope(contamination=79 / 1107)
+model = EllipticEnvelope()
 model.fit(train_latent_features)
 oneclass_predictions = model.predict(train_latent_features)
 masked_predictions = mask_preds_for_one_class(oneclass_predictions)
