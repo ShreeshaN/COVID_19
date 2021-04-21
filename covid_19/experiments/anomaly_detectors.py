@@ -35,9 +35,9 @@ train_labels, test_labels = pk.load(open(
         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
         'rb'))
 train_latent_features, test_latent_features = np.array(pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_train_latent_contrastive.npy',
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/ae_contrastive_train_latent.npy',
              'rb'))), np.array(pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_test_latent_contrastive.npy',
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/ae_contrastive_test_latent.npy',
              'rb')))
 print(
         'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))

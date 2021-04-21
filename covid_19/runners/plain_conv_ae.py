@@ -225,6 +225,16 @@ class PlainConvAutoencoderRunner:
         else:
             return input_data, labels
 
+    def wnd_log_latent_mean_std(self, latent, labels, type='train'):
+        latent = to_numpy(latent)
+        anomalies = latent[[i for i, x in enumerate(labels) if x == -1]]
+        normal_instances = latent[[i for i, x in enumerate(labels) if x == 1]]
+        wnb.log({f'{type}_latent anomalies mean': np.mean(anomalies)})
+        wnb.log({f'{type}_latent anomalies std': np.std(anomalies)})
+
+        wnb.log({f'{type}_latent normal_instances mean': np.mean(normal_instances)})
+        wnb.log({f'{type}_latent normal_instances std': np.std(normal_instances)})
+
     def train(self):
 
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
@@ -258,6 +268,8 @@ class PlainConvAutoencoderRunner:
                 torch.mean(torch.mean(loss)).backward()
                 self.optimiser.step()
                 self.batch_loss.append(to_numpy(torch.mean(loss)))
+
+                self.wnd_log_latent_mean_std(latent, label)
 
             self.logger.info('***** Overall Train Metrics ***** ')
             self.logger.info(
@@ -325,6 +337,8 @@ class PlainConvAutoencoderRunner:
                 test_loss = self.loss_function(test_predictions, audio_data, target=label)
                 losses.extend(to_numpy(test_loss))
                 self.test_batch_loss.append(to_numpy(torch.mean(test_loss)))
+
+                self.wnd_log_latent_mean_std(test_latent, label)
 
         wnb.log({"test_contrastive_loss": np.mean(self.test_batch_loss)})
         self.logger.info(f'***** {type} Metrics ***** ')
