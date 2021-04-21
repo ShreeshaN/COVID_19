@@ -36,6 +36,30 @@ torch.manual_seed(1234)
 np.random.seed(1234)
 
 
+class ContrastiveLoss(nn.Module):
+    """
+    Contrastive loss
+    Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
+    """
+
+    def __init__(self, margin, zero):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+        self.eps = 1e-9
+        self.zero = zero
+
+    def forward(self, output1, output2, target, size_average=True):
+        # distances = (output2 - output1).pow(2).sum(1)  # squared distances
+        # losses = 0.5 * (
+        #         target * distances + (1 + -1 * target) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
+        # return torch.mean(losses, dim=1) if size_average else losses
+        losses = torch.sum(
+                torch.max(target * (torch.sqrt(torch.sum(torch.square(output2 - output1), dim=-1)) - 1),
+                          self.zero),
+                dim=-1)
+        return losses
+
+
 class PlainConvAutoencoderRunner:
     def __init__(self, args, train_file, test_file):
         args['train_file'] = train_file
@@ -77,7 +101,7 @@ class PlainConvAutoencoderRunner:
         file_utils.create_dirs(paths)
 
         self.network = ConvAutoEncoder().to(self.device)
-        self.loss_function = nn.MSELoss(reduction='none')
+        self.loss_function = ContrastiveLoss(margin=1., zero=to_tensor(0, device=self.device))
         self.learning_rate_decay = args.learning_rate_decay
 
         self.optimiser = optim.Adam(self.network.parameters(), lr=self.learning_rate)
@@ -204,9 +228,9 @@ class PlainConvAutoencoderRunner:
     def train(self):
 
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
-                                                    train=True, only_negative_samples=True)
+                                                    train=True, only_negative_samples=False)
         test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file], shuffle=False,
-                                                  train=False, only_negative_samples=True)
+                                                  train=False, only_negative_samples=False)
 
         # Temporary analysis purpose
         self.flat_train_data = [element for sublist in train_data for element in sublist]
@@ -224,12 +248,14 @@ class PlainConvAutoencoderRunner:
                 self.optimiser.zero_grad()
 
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = [1.0 if x == 0 else -1.0 for x in label]
+                label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 predictions, latent = self.network(audio_data)
                 predictions = predictions.squeeze(1)
                 train_reconstructed.extend(to_numpy(predictions))
-                loss = self.loss_function(predictions, audio_data)
-                train_losses.extend(to_numpy(torch.mean(loss, dim=[1, 2])))
-                torch.mean(loss).backward()
+                loss = self.loss_function(predictions, audio_data, target=label)
+                train_losses.extend(to_numpy(loss))
+                torch.mean(torch.mean(loss)).backward()
                 self.optimiser.step()
                 self.batch_loss.append(to_numpy(torch.mean(loss)))
 
@@ -237,7 +263,7 @@ class PlainConvAutoencoderRunner:
             self.logger.info(
                     f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)}")
 
-            wnb.log({'train_reconstruction_loss': np.mean(self.batch_loss)})
+            wnb.log({'train_contrastive_loss': np.mean(self.batch_loss)})
 
             # test data
             self.run_for_epoch(epoch, test_data, test_labels, type='Test')
@@ -291,14 +317,16 @@ class PlainConvAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = [1.0 if x == 0 else -1.0 for x in label]
+                label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 test_predictions, test_latent = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
-                test_loss = self.loss_function(test_predictions, audio_data)
-                losses.extend(to_numpy(torch.mean(test_loss, dim=[1, 2])))
+                test_loss = self.loss_function(test_predictions, audio_data, target=label)
+                losses.extend(to_numpy(test_loss))
                 self.test_batch_loss.append(to_numpy(torch.mean(test_loss)))
 
-        wnb.log({"test_reconstruction_loss": np.mean(self.test_batch_loss)})
+        wnb.log({"test_contrastive_loss": np.mean(self.test_batch_loss)})
         self.logger.info(f'***** {type} Metrics ***** ')
         self.logger.info(
                 f"Loss: {'%.5f' % np.mean(self.test_batch_loss)}")
@@ -382,7 +410,6 @@ class PlainConvAutoencoderRunner:
     #             confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
     #
     #     # ------------------------------------------------------------------------------------------------------------------------
-
 
     def infer(self):
         from sklearn import svm

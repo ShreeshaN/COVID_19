@@ -1,7 +1,7 @@
 {
-  "run_name": "plain_conv_VAE_contrastive_loss",
+  "run_name": "plain_conv_AE_contrastive_loss",
   "wnb_tag": [
-    "conv_VAE_contrastive_loss"
+    "conv_AE_contrastive_loss"
   ],
   "epochs": 500,
   "batch_size": 32,
