@@ -49,10 +49,15 @@ class ContrastiveLoss(nn.Module):
         self.eps = 1e-9
 
     def forward(self, output1, output2, target, size_average=True):
-        distances = (output2 - output1).pow(2).sum(1)  # squared distances
-        losses = 0.5 * (
-                target * distances + (1 + -1 * target) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
-        return torch.mean(losses, dim=1) if size_average else losses
+        # distances = (output2 - output1).pow(2).sum(1)  # squared distances
+        # losses = 0.5 * (
+        #         target * distances + (1 + -1 * target) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
+        # return torch.mean(losses, dim=1) if size_average else losses
+        losses = torch.sum(
+                torch.max(target * (torch.sqrt(torch.sum(torch.square(output2 - output1), dim=-1)) - 1),
+                          torch.tensor(0.0)),
+                dim=-1)
+        return losses
 
 
 class PlainConvVariationalAutoencoderRunner:
@@ -106,7 +111,7 @@ class PlainConvVariationalAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  #  , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -241,7 +246,7 @@ class PlainConvVariationalAutoencoderRunner:
                     zip(train_data, train_labels)):
                 self.optimiser.zero_grad()
                 audio_data = to_tensor(audio_data, device=self.device)
-                label = [1 if x == 0 else -1 for x in label]
+                label = [1.0 if x == 0 else -1.0 for x in label]
                 label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 predictions, mu, log_var, _ = self.network(audio_data)
                 predictions = predictions.squeeze(1)
@@ -317,7 +322,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
-                label = [1 if x == 0 else -1 for x in label]
+                label = [1.0 if x == 0 else -1.0 for x in label]
                 label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 test_predictions, test_mu, test_log_var, _ = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
