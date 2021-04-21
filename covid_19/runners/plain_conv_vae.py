@@ -50,7 +50,6 @@ class ContrastiveLoss(nn.Module):
 
     def forward(self, output1, output2, target, size_average=True):
         distances = (output2 - output1).pow(2).sum(1)  # squared distances
-        target = torch.tensor(target).reshape(shape=(-1, 1))
         losses = 0.5 * (
                 target * distances + (1 + -1 * target) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
         return torch.mean(losses, dim=1) if size_average else losses
@@ -241,8 +240,8 @@ class PlainConvVariationalAutoencoderRunner:
             for i, (audio_data, label) in enumerate(
                     zip(train_data, train_labels)):
                 self.optimiser.zero_grad()
-
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 predictions, mu, log_var, _ = self.network(audio_data)
                 predictions = predictions.squeeze(1)
                 train_reconstructed.extend(to_numpy(predictions))
@@ -317,6 +316,7 @@ class PlainConvVariationalAutoencoderRunner:
         with torch.no_grad():
             for i, (audio_data, label) in enumerate(zip(x, y)):
                 audio_data = to_tensor(audio_data, device=self.device)
+                label = torch.tensor(label).reshape(shape=(-1, 1)).to(self.device)
                 test_predictions, test_mu, test_log_var, _ = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
