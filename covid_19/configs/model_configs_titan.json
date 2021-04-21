@@ -1,7 +1,7 @@
 {
-  "run_name": "plain_conv_VAE_128_nodes",
+  "run_name": "plain_conv_VAE_contrastive_loss",
   "wnb_tag": [
-    "forced_conv_VAE"
+    "conv_VAE_contrastive_loss"
   ],
   "epochs": 500,
   "batch_size": 32,
