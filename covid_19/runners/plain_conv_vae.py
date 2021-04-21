@@ -28,12 +28,32 @@ from covid_19.utils import file_utils
 from covid_19.utils.data_utils import read_pkl
 from covid_19.utils.logger import Logger
 from covid_19.utils.network_utils import to_tensor, to_numpy, accuracy_fn
+import torch.nn.functional as F
 
 import wandb as wnb
 
 # setting seed
 torch.manual_seed(1234)
 np.random.seed(1234)
+
+
+class ContrastiveLoss(nn.Module):
+    """
+    Contrastive loss
+    Takes embeddings of two samples and a target label == 1 if samples are from the same class and label == 0 otherwise
+    """
+
+    def __init__(self, margin):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+        self.eps = 1e-9
+
+    def forward(self, output1, output2, target, size_average=True):
+        distances = (output2 - output1).pow(2).sum(1)  # squared distances
+        target = torch.tensor(target).reshape(shape=(-1, 1))
+        losses = 0.5 * (
+                target * distances + (1 + -1 * target) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
+        return torch.mean(losses, dim=1) if size_average else losses
 
 
 class PlainConvVariationalAutoencoderRunner:
@@ -77,7 +97,7 @@ class PlainConvVariationalAutoencoderRunner:
         file_utils.create_dirs(paths)
 
         self.network = ConvVariationalAutoEncoder().to(self.device)
-        self.loss_function = nn.MSELoss(reduction='none')
+        self.loss_function = ContrastiveLoss(margin=1.)
         self.learning_rate_decay = args.learning_rate_decay
 
         self.optimiser = optim.Adam(self.network.parameters(), lr=self.learning_rate)
@@ -87,7 +107,7 @@ class PlainConvVariationalAutoencoderRunner:
 
         if self.train_net:
             wnb.init(project=args.project_name, config=args, save_code=True, name=self.run_name,
-                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag)  # , mode='disabled'
+                     entity="shreeshanwnb", reinit=True, tags=args.wnb_tag, mode='disabled')  # , mode='disabled'
             wnb.watch(self.network)  # , log='all', log_freq=3
             self.network.train()
             self.logger = Logger(name=self.run_name, log_path=self.network_save_path).get_logger()
@@ -203,9 +223,9 @@ class PlainConvVariationalAutoencoderRunner:
     def train(self):
 
         train_data, train_labels = self.data_reader(self.data_read_path, [self.train_file], shuffle=True,
-                                                    train=True, only_negative_samples=True)
+                                                    train=True, only_negative_samples=False)
         test_data, test_labels = self.data_reader(self.data_read_path, [self.test_file], shuffle=False,
-                                                  train=False, only_negative_samples=True)
+                                                  train=False, only_negative_samples=False)
 
         # Temporary analysis purpose
         self.flat_train_data = [element for sublist in train_data for element in sublist]
@@ -226,13 +246,14 @@ class PlainConvVariationalAutoencoderRunner:
                 predictions, mu, log_var, _ = self.network(audio_data)
                 predictions = predictions.squeeze(1)
                 train_reconstructed.extend(to_numpy(predictions))
-                squared_loss = self.loss_function(predictions, audio_data)
+                contrastive_loss = self.loss_function(output1=predictions, output2=audio_data, target=label,
+                                                      size_average=True)
                 kld_loss = torch.mean(0.5 * torch.sum(log_var.exp() - log_var - 1 + mu.pow(2)))
-                mse_loss = torch.mean(squared_loss, dim=[1, 2])  # Loss per sample in the batch
-                train_losses.extend(to_numpy(mse_loss))
-                torch.mean(mse_loss).add(kld_loss).backward()
+                # contrastive_loss = torch.mean(contrastive_loss, dim=[1,2])  # Loss per sample in the batch
+                train_losses.extend(to_numpy(contrastive_loss))
+                torch.mean(contrastive_loss).add(kld_loss).backward()
                 self.optimiser.step()
-                self.batch_loss.append(to_numpy(torch.mean(mse_loss)))
+                self.batch_loss.append(to_numpy(torch.mean(contrastive_loss)))
                 self.batch_kld.append(to_numpy(kld_loss))
 
             self.logger.info('***** Overall Train Metrics ***** ')
@@ -240,7 +261,7 @@ class PlainConvVariationalAutoencoderRunner:
                     f"Epoch: {epoch} | Loss: {'%.5f' % np.mean(self.batch_loss)} |"
                     f" KLD: {'%.5f' % np.mean(self.batch_kld)}")
 
-            wnb.log({'train_reconstruction_loss': np.mean(self.batch_loss)})
+            wnb.log({'train_contrastive_loss': np.mean(self.batch_loss)})
             wnb.log({'train_kld': np.mean(self.batch_kld)})
 
             # test data
@@ -299,13 +320,13 @@ class PlainConvVariationalAutoencoderRunner:
                 test_predictions, test_mu, test_log_var, _ = self.network(audio_data)
                 test_predictions = test_predictions.squeeze(1)
                 test_reconstructed.extend(to_numpy(test_predictions))
-                test_squared_loss = self.loss_function(test_predictions, audio_data)
-                test_mse_loss = torch.mean(test_squared_loss, dim=[1, 2])  # Loss per sample in the batch
+                test_contrastive_loss = self.loss_function(test_predictions, audio_data, label)
+                # test_contrastive_loss = torch.mean(test_contrastive_loss, dim=[1, 2])  # Loss per sample in the batch
                 test_batch_kld = torch.mean(0.5 * torch.sum(test_log_var.exp() - test_log_var - 1 + test_mu.pow(2)))
-                losses.extend(to_numpy(test_mse_loss))
-                self.test_batch_loss.append(to_numpy(torch.mean(test_mse_loss)))
+                losses.extend(to_numpy(test_contrastive_loss))
+                self.test_batch_loss.append(to_numpy(torch.mean(test_contrastive_loss)))
                 self.test_batch_kld.append(to_numpy(test_batch_kld))
-        wnb.log({"test_reconstruction_loss": np.mean(self.test_batch_loss)})
+        wnb.log({"test_contrastive_loss": np.mean(self.test_batch_loss)})
         wnb.log({"test_kld_loss": np.mean(self.test_batch_kld)})
 
         self.logger.info(f'***** {type} Metrics ***** ')
@@ -392,4 +413,3 @@ class PlainConvVariationalAutoencoderRunner:
                 confusion_matrix([element for sublist in test_labels for element in sublist], masked_predictions)))
 
         # ------------------------------------------------------------------------------------------------------------------------
-
