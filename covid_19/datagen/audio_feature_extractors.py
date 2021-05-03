@@ -234,6 +234,9 @@ def extract_signal_features(signal, signal_sr):
 
     # normalise the sound signal before processing
     signal = signal / np.max(np.abs(signal))
+    mean_ = np.float(np.mean(signal))
+    mean_ = 0 if np.isnan(mean_) else mean_
+    signal = np.nan_to_num(signal, nan=mean_, posinf=mean_, neginf=mean_)
     # trim the signal to the appropriate length
     trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
     # extract the signal duration
