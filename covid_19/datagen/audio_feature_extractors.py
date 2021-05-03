@@ -235,27 +235,27 @@ def extract_signal_features(signal, signal_sr):
     # normalise the sound signal before processing
     signal = signal / np.max(np.abs(signal))
     # trim the signal to the appropriate length
-    trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
+    # trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
     # extract the signal duration
-    signal_duration = librosa.get_duration(y=trimmed_signal, sr=signal_sr)
+    signal_duration = librosa.get_duration(y=signal, sr=signal_sr)
     # use librosa to track the beats
-    tempo, beats = librosa.beat.beat_track(y=trimmed_signal, sr=signal_sr)
+    tempo, beats = librosa.beat.beat_track(y=signal, sr=signal_sr)
     # find the onset strength of the trimmed signal
-    o_env = librosa.onset.onset_strength(trimmed_signal, sr=signal_sr)
+    o_env = librosa.onset.onset_strength(signal, sr=signal_sr)
     # find the frames of the onset
     onset_frames = librosa.onset.onset_detect(onset_envelope=o_env, sr=signal_sr)
     # keep only the first onset frame
     onsets = onset_frames.shape[0]
     # decompose the signal into its magnitude and the phase components such that signal = mag * phase
-    mag, phase = librosa.magphase(librosa.stft(trimmed_signal, n_fft=FRAME_LEN, hop_length=HOP))
+    mag, phase = librosa.magphase(librosa.stft(signal, n_fft=FRAME_LEN, hop_length=HOP))
     # extract the rms from the magnitude component
-    rms = librosa.feature.rms(y=trimmed_signal)[0]
+    rms = librosa.feature.rms(y=signal)[0]
     # extract the spectral centroid of the magnitude
     cent = librosa.feature.spectral_centroid(S=mag)[0]
     # extract the spectral rolloff point from the magnitude
     rolloff = librosa.feature.spectral_rolloff(S=mag, sr=signal_sr)[0]
     # extract the zero crossing rate from the trimmed signal using the predefined frame and hop lengths
-    zcr = librosa.feature.zero_crossing_rate(trimmed_signal, frame_length=FRAME_LEN, hop_length=HOP)[0]
+    zcr = librosa.feature.zero_crossing_rate(signal, frame_length=FRAME_LEN, hop_length=HOP)[0]
 
     # pack the extracted features into the feature vector to be returned
     signal_features = np.concatenate(
@@ -271,7 +271,7 @@ def extract_signal_features(signal, signal_sr):
     )
 
     # finally, return the gathered features and the trimmed signal
-    return signal_features, trimmed_signal
+    return signal_features, signal
 
 
 def extract_mfcc(signal, signal_sr=SR, n_fft=FRAME_LEN, hop_length=HOP, n_mfcc=MFCC_dim):
@@ -316,11 +316,9 @@ def extract_mfcc(signal, signal_sr=SR, n_fft=FRAME_LEN, hop_length=HOP, n_mfcc=M
 def brown_data_features(signal, sampling_rate):
     # extract the signal features
     signal_features, trimmed_signal = extract_signal_features(signal, sampling_rate)
-    print('features', signal_features.shape)
 
     # extract the mfcc's from the trimmed signal and get the statistical feature.
     mfccs = extract_mfcc(trimmed_signal)
-    print('mfccs', signal_features.shape)
 
     return np.concatenate((signal_features, mfccs), axis=0)
 
@@ -338,7 +336,6 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
     """
     data = defaultdict(list)
     filepath = base_path + file
-    print('filepath ', filepath)
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
         for audio_file in filenames[:2]:
