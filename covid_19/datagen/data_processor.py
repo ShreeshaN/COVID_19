@@ -56,7 +56,7 @@ class DataProcessor:
         data[data.index.isin(test_index)][required_labels].to_csv(self.coswara_datapath + '/test_data.csv', index=False)
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
-        folders_with_date = [x for x in folders_with_date if os.path.isdir(x)][:2]
+        folders_with_date = [x for x in folders_with_date if os.path.isdir(x)]
         for folder_with_date in folders_with_date:
             wav_folders.extend(['/'.join([folder_with_date.split('/')[-1], x]) for x in os.listdir(folder_with_date) if
                                 os.path.isdir(folder_with_date + '/' + x)])
@@ -78,6 +78,7 @@ class DataProcessor:
 
     def run(self):
         for processor_ in [self.mit_processor, self.coswara_processor]:
+            print('Processing ', processor_)
             processor_()
 
 

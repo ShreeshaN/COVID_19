@@ -341,7 +341,7 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
     filepath = base_path + file
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
-        for audio_file in filenames[:2]:
+        for audio_file in filenames:
             try:
                 audio, _ = librosa.load(audio_file, sr=sampling_rate)
             except Exception as e:
