@@ -234,13 +234,10 @@ def extract_signal_features(signal, signal_sr):
 
     # normalise the sound signal before processing
     signal = signal / np.max(np.abs(signal))
-    mean_ = np.float(np.mean(signal))
-    signal = np.nan_to_num(signal, nan=mean_, posinf=mean_, neginf=mean_)
-
     # trim the signal to the appropriate length
-    # trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
+    trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
     # extract the signal duration
-    # signal_duration = librosa.get_duration(y=signal, sr=signal_sr)
+    signal_duration = librosa.get_duration(y=signal, sr=signal_sr)
     # use librosa to track the beats
     tempo, beats = librosa.beat.beat_track(y=signal, sr=signal_sr)
     # find the onset strength of the trimmed signal
@@ -263,7 +260,7 @@ def extract_signal_features(signal, signal_sr):
     # pack the extracted features into the feature vector to be returned
     signal_features = np.concatenate(
             (
-                np.array([tempo, onsets]),
+                np.array([signal_duration, tempo, onsets]),
                 get_period(signal, signal_sr=signal_sr),
                 sta_fun(rms),
                 sta_fun(cent),
@@ -352,8 +349,9 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
             chunks = cut_audio(audio, sampling_rate=sampling_rate, sample_size_in_seconds=sample_size_in_seconds,
                                overlap=overlap)
             for chunk in chunks:
-                mean_ = np.mean(chunk)
-                chunk = np.nan_to_num(chunk, nan=np.float(mean_))
+                mean_ = np.float(np.mean(chunk))
+                mean_ = 0 if np.isnan(mean_) else mean_
+                chunk = np.nan_to_num(chunk, nan=mean_, posinf=mean_, neginf=mean_)
                 if method == 'fbank':
                     # zero_crossing = librosa.feature.zero_crossing_rate(chunk)
                     # f0 = pysptk.swipe(chunk.astype(np.float64), fs=sampling_rate, hopsize=510, min=60, max=240,
