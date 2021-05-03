@@ -234,10 +234,13 @@ def extract_signal_features(signal, signal_sr):
 
     # normalise the sound signal before processing
     signal = signal / np.max(np.abs(signal))
+    mean_ = np.float(np.mean(signal))
+    signal = np.nan_to_num(signal, nan=mean_, posinf=mean_, neginf=mean_)
+
     # trim the signal to the appropriate length
     # trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
     # extract the signal duration
-    signal_duration = librosa.get_duration(y=signal, sr=signal_sr)
+    # signal_duration = librosa.get_duration(y=signal, sr=signal_sr)
     # use librosa to track the beats
     tempo, beats = librosa.beat.beat_track(y=signal, sr=signal_sr)
     # find the onset strength of the trimmed signal
@@ -260,7 +263,7 @@ def extract_signal_features(signal, signal_sr):
     # pack the extracted features into the feature vector to be returned
     signal_features = np.concatenate(
             (
-                np.array([signal_duration, tempo, onsets]),
+                np.array([tempo, onsets]),
                 get_period(signal, signal_sr=signal_sr),
                 sta_fun(rms),
                 sta_fun(cent),
