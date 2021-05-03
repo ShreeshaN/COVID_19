@@ -349,7 +349,8 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
             chunks = cut_audio(audio, sampling_rate=sampling_rate, sample_size_in_seconds=sample_size_in_seconds,
                                overlap=overlap)
             for chunk in chunks:
-                chunk = np.nan_to_num(chunk)
+                mean_ = np.mean(chunk)
+                chunk = np.nan_to_num(chunk, nan=np.float(mean_))
                 if method == 'fbank':
                     # zero_crossing = librosa.feature.zero_crossing_rate(chunk)
                     # f0 = pysptk.swipe(chunk.astype(np.float64), fs=sampling_rate, hopsize=510, min=60, max=240,
