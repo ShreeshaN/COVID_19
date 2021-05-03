@@ -22,6 +22,21 @@ from covid_19.utils.network_utils import to_tensor, accuracy_fn
 threshold = 0.5
 
 
+def test_normalcy(features):
+    from scipy import stats
+    np.random.seed(28041990)
+    k2, p = stats.normaltest(features)
+    print(np.histogram(p))
+    p = p.mean()
+    print("p = {:g}".format(p))
+    alpha = 0.005  # 1e-3
+
+    if p < alpha:  # null hypothesis: x comes from a normal distribution
+        print("The null hypothesis can be rejected")
+    else:
+        print("The null hypothesis cannot be rejected")
+
+
 def mask_preds_for_one_class(predictions):
     # 1 --> inliers, -1 --> outliers
     # in our case, inliers are non covid samples. i.e label 0.
@@ -35,10 +50,16 @@ train_labels, test_labels = pk.load(open(
         '/Users/badgod/badgod_documents/Datasets/covid19/processed_data/coswara_test_data_fbank_cough-shallow_labels.pkl',
         'rb'))
 train_latent_features, test_latent_features = np.array(pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/ae_contrastive_train_latent.npy',
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_train_latent_contrastive.npy',
              'rb'))), np.array(pk.load(
-        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/ae_contrastive_test_latent.npy',
+        open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_test_latent_contrastive.npy',
              'rb')))
+
+# train_latent_features, test_latent_features = np.array(pk.load(
+#         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_train_latent.npy',
+#              'rb'))), np.array(pk.load(
+#         open('/Users/badgod/badgod_documents/Datasets/covid19/processed_data/vae_forced_test_latent.npy',
+#              'rb')))
 print(
         'Total train data len: ' + str(len(train_labels)) + ' | Positive samples: ' + str(sum(train_labels)))
 print(
@@ -47,8 +68,35 @@ print(
 
 ones_idx = [i for i, x in enumerate(train_labels) if x == 1]
 zeros_idx = [i for i, x in enumerate(train_labels) if x == 0]
-print(train_latent_features[ones_idx].mean(), train_latent_features[ones_idx].std())
-print(train_latent_features[zeros_idx].mean(), train_latent_features[zeros_idx].std())
+# print(train_latent_features[ones_idx].mean(), train_latent_features[ones_idx].std())
+# print(train_latent_features[zeros_idx].mean(), train_latent_features[zeros_idx].std())
+#
+# test_normalcy(train_latent_features[ones_idx])
+# test_normalcy(train_latent_features[zeros_idx])
+
+# ones_idx = [i for i, x in enumerate(test_labels) if x == 1]
+# zeros_idx = [i for i, x in enumerate(test_labels) if x == 0]
+# print(test_latent_features[ones_idx].mean(), test_latent_features[ones_idx].std())
+# print(test_latent_features[zeros_idx].mean(), test_latent_features[zeros_idx].std())
+# test_normalcy(test_latent_features[ones_idx])
+# test_normalcy(test_latent_features[zeros_idx])
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+import math
+
+# mu = train_latent_features[zeros_idx].mean()
+# variance = train_latent_features[zeros_idx].var()
+# sigma = math.sqrt(variance)
+# x = np.linspace(mu - 3 * sigma, mu + 3 * sigma, 100)
+# plt.plot(x, stats.norm.pdf(x, mu, sigma))
+print(train_latent_features[ones_idx].mean(axis=1).shape)
+plt.hist(train_latent_features[ones_idx][0])
+plt.show()
+
+exit()
 # exit()
 # model = svm.OneClassSVM(kernel="poly")
 # oneclass_svm = IsolationForest(random_state=0)

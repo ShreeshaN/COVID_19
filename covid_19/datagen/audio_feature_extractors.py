@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import pysptk
+from math import pi
 import torch
 import wavio
 from joblib import Parallel, delayed
@@ -27,9 +28,15 @@ from pyannote.audio.utils.signal import Binarize
 from pyts.image import GramianAngularField
 from tqdm import tqdm
 from collections import defaultdict
+from scipy.fftpack import fft, hilbert
 
 from covid_19.utils.file_utils import delete_file
 import json
+
+SR = 22050
+FRAME_LEN = int(SR / 10)  # 100 ms
+HOP = int(FRAME_LEN / 2)  # 50% overlap, meaning 5ms hop length
+MFCC_dim = 13  # the MFCC dimension
 
 
 def mfcc_features(audio, sampling_rate, normalise=False):
@@ -153,6 +160,171 @@ def get_shimmer_jitter_from_opensmile(audio, index, sr):
     return data_needed
 
 
+def sta_fun(np_data):
+    """Extract various statistical features from the numpy array provided as input.
+    :param np_data: the numpy array to extract the features from
+    :type np_data: numpy.ndarray
+    :return: The extracted features as a vector
+    :rtype: numpy.ndarray
+    """
+
+    # perform a sanity check
+    if np_data is None:
+        raise ValueError("Input array cannot be None")
+
+    # perform the feature extraction
+    dat_min = np.min(np_data)
+    dat_max = np.max(np_data)
+    dat_mean = np.mean(np_data)
+    dat_rms = np.sqrt(np.sum(np.square(np_data)) / len(np_data))
+    dat_median = np.median(np_data)
+    dat_qrl1 = np.percentile(np_data, 25)
+    dat_qrl3 = np.percentile(np_data, 75)
+    dat_lower_q = np.quantile(np_data, 0.25, interpolation="lower")
+    dat_higher_q = np.quantile(np_data, 0.75, interpolation="higher")
+    dat_iqrl = dat_higher_q - dat_lower_q
+    dat_std = np.std(np_data)
+    s = pd.Series(np_data)
+    dat_skew = s.skew()
+    dat_kurt = s.kurt()
+
+    # finally return the features in a concatenated array (as a vector)
+    return np.array([dat_mean, dat_min, dat_max, dat_std, dat_rms,
+                     dat_median, dat_qrl1, dat_qrl3, dat_iqrl, dat_skew, dat_kurt])
+
+
+def get_period(signal, signal_sr):
+    """Extract the period from the the provided signal
+    :param signal: the signal to extract the period from
+    :type signal: numpy.ndarray
+    :param signal_sr: the sampling rate of the input signal
+    :type signal_sr: integer
+    :return: a vector containing the signal period
+    :rtype: numpy.ndarray
+    """
+
+    # perform a sanity check
+    if signal is None:
+        raise ValueError("Input signal cannot be None")
+
+    # transform the signal to the hilbert space
+    hy = hilbert(signal)
+
+    ey = np.sqrt(signal ** 2 + hy ** 2)
+    min_time = 1.0 / signal_sr
+    tot_time = len(ey) * min_time
+    pow_ft = np.abs(fft(ey))
+    peak_freq = pow_ft[3: int(len(pow_ft) / 2)]
+    peak_freq_pos = peak_freq.argmax()
+    peak_freq_val = 2 * pi * (peak_freq_pos + 2) / tot_time
+    period = 2 * pi / peak_freq_val
+
+    return np.array([period])
+
+
+def extract_signal_features(signal, signal_sr):
+    """Extract part of handcrafted features from the input signal.
+    :param signal: the signal the extract features from
+    :type signal: numpy.ndarray
+    :param signal_sr: the sample rate of the signal
+    :type signal_sr: integer
+    :return: the populated feature vector
+    :rtype: numpy.ndarray
+    """
+
+    # normalise the sound signal before processing
+    signal = signal / np.max(np.abs(signal))
+    # trim the signal to the appropriate length
+    trimmed_signal, idc = librosa.effects.trim(signal, frame_length=FRAME_LEN, hop_length=HOP)
+    # extract the signal duration
+    signal_duration = librosa.get_duration(y=trimmed_signal, sr=signal_sr)
+    # use librosa to track the beats
+    tempo, beats = librosa.beat.beat_track(y=trimmed_signal, sr=signal_sr)
+    # find the onset strength of the trimmed signal
+    o_env = librosa.onset.onset_strength(trimmed_signal, sr=signal_sr)
+    # find the frames of the onset
+    onset_frames = librosa.onset.onset_detect(onset_envelope=o_env, sr=signal_sr)
+    # keep only the first onset frame
+    onsets = onset_frames.shape[0]
+    # decompose the signal into its magnitude and the phase components such that signal = mag * phase
+    mag, phase = librosa.magphase(librosa.stft(trimmed_signal, n_fft=FRAME_LEN, hop_length=HOP))
+    # extract the rms from the magnitude component
+    rms = librosa.feature.rms(y=trimmed_signal)[0]
+    # extract the spectral centroid of the magnitude
+    cent = librosa.feature.spectral_centroid(S=mag)[0]
+    # extract the spectral rolloff point from the magnitude
+    rolloff = librosa.feature.spectral_rolloff(S=mag, sr=signal_sr)[0]
+    # extract the zero crossing rate from the trimmed signal using the predefined frame and hop lengths
+    zcr = librosa.feature.zero_crossing_rate(trimmed_signal, frame_length=FRAME_LEN, hop_length=HOP)[0]
+
+    # pack the extracted features into the feature vector to be returned
+    signal_features = np.concatenate(
+            (
+                np.array([signal_duration, tempo, onsets]),
+                get_period(signal, signal_sr=signal_sr),
+                sta_fun(rms),
+                sta_fun(cent),
+                sta_fun(rolloff),
+                sta_fun(zcr),
+            ),
+            axis=0,
+    )
+
+    # finally, return the gathered features and the trimmed signal
+    return signal_features, trimmed_signal
+
+
+def extract_mfcc(signal, signal_sr=SR, n_fft=FRAME_LEN, hop_length=HOP, n_mfcc=MFCC_dim):
+    """Extracts the Mel-frequency cepstral coefficients (MFCC) from the provided signal
+    :param signal: the signal to extract the mfcc from
+    :type signal: numpy.ndarray
+    :param signal_sr: the signal sample rate
+    :type signal_sr: integer
+    :param n_fft: the fft window size
+    :type n_fft: integer
+    :param hop_length: the hop length
+    :type hop_length: integer
+    :param n_mfcc: the dimension of the mfcc
+    :type n_mfcc: integer
+    :return: the populated feature vector
+    :rtype: numpy.ndarray
+    """
+    # compute the mfcc of the input signal
+    mfcc = librosa.feature.mfcc(
+            y=signal, sr=signal_sr, n_fft=n_fft, hop_length=hop_length, n_mfcc=n_mfcc, dct_type=3
+    )
+
+    # extract the first and second order deltas from the retrieved mfcc's
+    mfcc_delta = librosa.feature.delta(mfcc, order=1)
+    mfcc_delta2 = librosa.feature.delta(mfcc, order=2)
+
+    # create the mfcc array
+    mfccs = []
+
+    # populate it using the extracted features
+    for i in range(n_mfcc):
+        mfccs.extend(sta_fun(mfcc[i, :]))
+    for i in range(n_mfcc):
+        mfccs.extend(sta_fun(mfcc_delta[i, :]))
+    for i in range(n_mfcc):
+        mfccs.extend(sta_fun(mfcc_delta2[i, :]))
+
+    # finally return the coefficients
+    return mfccs
+
+
+def brown_data_features(signal, sampling_rate):
+    # extract the signal features
+    signal_features, trimmed_signal = extract_signal_features(signal, sampling_rate)
+    print('features', signal_features.shape)
+
+    # extract the mfcc's from the trimmed signal and get the statistical feature.
+    mfccs = extract_mfcc(trimmed_signal)
+    print('mfccs', signal_features.shape)
+
+    return np.concatenate((signal_features, mfccs), axis=0)
+
+
 def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method):
     """
     This method is called by the preprocess data method
@@ -166,15 +338,16 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
     """
     data = defaultdict(list)
     filepath = base_path + file
+    print('filepath ', filepath)
     if os.path.exists(filepath):
         filenames = glob.glob(filepath + '/*.wav')
-        for audio_file in filenames:
+        for audio_file in filenames[:2]:
             try:
                 audio, _ = librosa.load(audio_file, sr=sampling_rate)
             except Exception as e:
                 print(e)
                 continue
-            if librosa.get_duration(audio, sr=sampling_rate) < 1:
+            if librosa.get_duration(audio, sr=sampling_rate) < 2:
                 continue
             chunks = cut_audio(audio, sampling_rate=sampling_rate, sample_size_in_seconds=sample_size_in_seconds,
                                overlap=overlap)
@@ -203,6 +376,8 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
                     features = mfcc_features(chunk, sampling_rate, normalise)
                 elif method == 'raw':
                     features = chunk
+                elif method == 'brown':
+                    features = brown_data_features(chunk, sampling_rate)
                 else:
                     raise Exception(
                             'Specify a method to use for pre processing raw audio signal. Available options - {fbank, mfcc, gaf, raw}')
@@ -213,12 +388,12 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
 
 
 def preprocess_data(base_path, files, normalise, sample_size_in_seconds, sampling_rate, overlap, method):
-    Parallel(n_jobs=8, backend='multiprocessing')(
+    Parallel(n_jobs=os.cpu_count(), backend='multiprocessing')(
             delayed(read_audio_n_process)(file, base_path, sampling_rate, sample_size_in_seconds, overlap,
                                           normalise, method) for file in
             tqdm(files, total=len(files)))
-    # for file, label in tqdm(zip(files, labels), total=len(labels)):
-    #     read_audio_n_process(file, label, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
+    # for file in files:
+    #     read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
 
     # for per_file_data in aggregated_data:
     #     # per_file_data[1] are labels for the audio file.
@@ -230,91 +405,90 @@ def preprocess_data(base_path, files, normalise, sample_size_in_seconds, samplin
     #         out_labels.append(label)
     # return data, out_labels, raw
 
-############################## TESTING ##############################
-# file = '/Users/badgod/Downloads/musicradar-303-style-acid-samples/High Arps/132bpm/AM_HiTeeb[A]_132D.wav'
-# note, sr = librosa.load(file)
-# print(note.shape)
-# list_y = get_audio_list(note)
-# print([librosa.output.write_wav(
-#         "/Users/badgod/Downloads/musicradar-303-style-acid-samples/High Arps/132bpm/" + str(i) + ".wav", x, 22050) for
-#     i, x
-#     in enumerate(list_y)])
+    ############################## TESTING ##############################
+    # file = '/Users/badgod/Downloads/musicradar-303-style-acid-samples/High Arps/132bpm/AM_HiTeeb[A]_132D.wav'
+    # note, sr = librosa.load(file)
+    # print(note.shape)
+    # list_y = get_audio_list(note)
+    # print([librosa.output.write_wav(
+    #         "/Users/badgod/Downloads/musicradar-303-style-acid-samples/High Arps/132bpm/" + str(i) + ".wav", x, 22050) for
+    #     i, x
+    #     in enumerate(list_y)])
 
-# def mfcc():
-#     # this is mel filters + dct
-#     file_name = '/Users/badgod/Downloads/AC_12Str85F-01.mp3'
-#     audio, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
-#
-#     print("audio, sample_rate", audio.shape, sample_rate)
-#     mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=40)
-#     print(mfccs.shape)
-#     print(np.max(mfccs), np.min(mfccs))
-#     # exit()
-#     mfccsscaled = np.mean(mfccs.T, axis=0)
-#     print(mfccsscaled.shape)
-#
-#     plt.figure(figsize=(12, 4))
-#     # plt.plot(audio)
-#     # plt.plot(mfccsscaled)
-#     librosa.display.specshow(mfccs, sr=sample_rate, x_axis='time')
-#     plt.show()
+    # def mfcc():
+    #     # this is mel filters + dct
+    #     file_name = '/Users/badgod/Downloads/AC_12Str85F-01.mp3'
+    #     audio, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
+    #
+    #     print("audio, sample_rate", audio.shape, sample_rate)
+    #     mfccs = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=40)
+    #     print(mfccs.shape)
+    #     print(np.max(mfccs), np.min(mfccs))
+    #     # exit()
+    #     mfccsscaled = np.mean(mfccs.T, axis=0)
+    #     print(mfccsscaled.shape)
+    #
+    #     plt.figure(figsize=(12, 4))
+    #     # plt.plot(audio)
+    #     # plt.plot(mfccsscaled)
+    #     librosa.display.specshow(mfccs, sr=sample_rate, x_axis='time')
+    #     plt.show()
 
+    #
 
-#
+    # mfcc()
 
-# mfcc()
-
-# def mel_filters_x():
-#     file_name = '/Users/badgod/badgod_documents/Projects/Alco_audio/data/ALC/DATA/audio_2.wav'
-#     audio, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
-#
-#     print("audio, sample_rate", audio.shape, sample_rate)
-#     # plt.plot(range(len(audio)), audio)
-#     # plt.savefig('/Users/badgod/badgod_documents/Projects/Alco_audio/raw_signal.jpg')
-#     # plt.show()
-#     # exit()
-#     logmel = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_mels=40)
-#     print("melspectrogram ", logmel.shape)
-#     # exit()
-#     print(np.min(logmel), np.max(logmel))
-#     S_dB = librosa.power_to_db(logmel, ref=np.max)
-#     print(np.min(S_dB), np.max(S_dB))
-#     print(S_dB[0].shape)
-#     print(S_dB.shape)
-#     print(S_dB.mean())
-#     # S_dB = S_dB / 255
-#     print(S_dB.mean())
-#     # exit()
-#     # S_dB = np.mean(S_dB.T, axis=0)
-#     # print(S_dB.shape)
-#
-#     # plt.figure(figsize=(12, 8))
-#     # plt.plot(audio)
-#     # plt.plot(mfccsscaled)
-#     # librosa.display.specshow(logmel, sr=sample_rate, x_axis='time')
-#     librosa.display.specshow(S_dB, sr=sample_rate)
-#     plt.xlabel('Time')
-#     plt.ylabel('Mels')
-#     plt.savefig("/Users/badgod/badgod_documents/Projects/Alco_audio/test_40mels.jpg")
-#
-#     # plt.plot(S_dB)
-#     plt.show()
-#
-#     plt.close()
-#
-#
-# mel_filters_x()
-#
-#
-# import matplotlib.pyplot as plt
-# import numpy as np
-#
-# data = np.load("/Users/badgod/badgod_documents/Alco_audio/small_data/40_mels/train_challenge_data.npy",
-#                allow_pickle=True)
-# print(data.shape)
-#
-# data_means = np.array([x.mean() for x in data])
-#
-# plt.hist(data_means)
-# plt.show()
-############################## TESTING ##############################
+    # def mel_filters_x():
+    #     file_name = '/Users/badgod/badgod_documents/Projects/Alco_audio/data/ALC/DATA/audio_2.wav'
+    #     audio, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
+    #
+    #     print("audio, sample_rate", audio.shape, sample_rate)
+    #     # plt.plot(range(len(audio)), audio)
+    #     # plt.savefig('/Users/badgod/badgod_documents/Projects/Alco_audio/raw_signal.jpg')
+    #     # plt.show()
+    #     # exit()
+    #     logmel = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_mels=40)
+    #     print("melspectrogram ", logmel.shape)
+    #     # exit()
+    #     print(np.min(logmel), np.max(logmel))
+    #     S_dB = librosa.power_to_db(logmel, ref=np.max)
+    #     print(np.min(S_dB), np.max(S_dB))
+    #     print(S_dB[0].shape)
+    #     print(S_dB.shape)
+    #     print(S_dB.mean())
+    #     # S_dB = S_dB / 255
+    #     print(S_dB.mean())
+    #     # exit()
+    #     # S_dB = np.mean(S_dB.T, axis=0)
+    #     # print(S_dB.shape)
+    #
+    #     # plt.figure(figsize=(12, 8))
+    #     # plt.plot(audio)
+    #     # plt.plot(mfccsscaled)
+    #     # librosa.display.specshow(logmel, sr=sample_rate, x_axis='time')
+    #     librosa.display.specshow(S_dB, sr=sample_rate)
+    #     plt.xlabel('Time')
+    #     plt.ylabel('Mels')
+    #     plt.savefig("/Users/badgod/badgod_documents/Projects/Alco_audio/test_40mels.jpg")
+    #
+    #     # plt.plot(S_dB)
+    #     plt.show()
+    #
+    #     plt.close()
+    #
+    #
+    # mel_filters_x()
+    #
+    #
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    #
+    # data = np.load("/Users/badgod/badgod_documents/Alco_audio/small_data/40_mels/train_challenge_data.npy",
+    #                allow_pickle=True)
+    # print(data.shape)
+    #
+    # data_means = np.array([x.mean() for x in data])
+    #
+    # plt.hist(data_means)
+    # plt.show()
+    ############################## TESTING ##############################
