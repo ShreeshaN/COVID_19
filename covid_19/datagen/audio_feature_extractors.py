@@ -29,6 +29,17 @@ from pyts.image import GramianAngularField
 from tqdm import tqdm
 from collections import defaultdict
 from scipy.fftpack import fft, hilbert
+import urllib
+from covid_19.datagen.vggish import vggish_input
+from covid_19.datagen.vggish import vggish_params
+from covid_19.datagen.vggish import vggish_slim
+import tensorflow as tf
+
+tf.compat.v1.disable_v2_behavior()
+
+import sys
+
+sys.path.append('../vggish')
 
 from covid_19.utils.file_utils import delete_file
 import json
@@ -37,6 +48,80 @@ SR = 22050
 FRAME_LEN = int(SR / 10)  # 100 ms
 HOP = int(FRAME_LEN / 2)  # 50% overlap, meaning 5ms hop length
 MFCC_dim = 13  # the MFCC dimension
+SR_VGG = 16000
+
+
+# Vggish
+
+def download(url, dst_dir):
+    """Download file.
+    If the file not exist then download it.
+    Args:url: Web location of the file.
+    Returns: path to downloaded file.
+    """
+    filename = url.split('/')[-1]
+    filepath = os.path.join(dst_dir, filename)
+    if not os.path.exists(filepath):
+        def _progress(count, block_size, total_size):
+            sys.stdout.write('\r>> Downloading %s %.1f%%' %
+                             (filename,
+                              float(count * block_size) / float(total_size) * 100.0))
+            sys.stdout.flush()
+
+        filepath, _ = urllib.request.urlretrieve(url, filepath, _progress)
+        statinfo = os.stat(filepath)
+        print('Successfully downloaded:', filename, statinfo.st_size, 'bytes.')
+    return filepath
+
+
+def sta_fun_2(npdata):  # 1D np array
+    """Extract various statistical features from the numpy array provided as input.
+    :param np_data: the numpy array to extract the features from
+    :type np_data: numpy.ndarray
+    :return: The extracted features as a vector
+    :rtype: numpy.ndarray
+    """
+
+    # perform a sanity check
+    if npdata is None:
+        raise ValueError("Input array cannot be None")
+
+    # perform the feature extraction
+    Mean = np.mean(npdata, axis=0)
+    Std = np.std(npdata, axis=0)
+
+    # finally return the features in a concatenated array (as a vector)
+    return np.concatenate((Mean, Std), axis=0).reshape(1, -1)
+
+
+print("\nTesting your install of VGGish\n")
+# Paths to downloaded VGGish files.
+checkpoint_path = "vggish/vggish_model.ckpt"
+
+if not os.path.exists(checkpoint_path):  # automatically download the checkpoint if not exist.
+    url = 'https://storage.googleapis.com/audioset/vggish_model.ckpt'
+    download(url, 'vggish/')
+
+sess = tf.compat.v1.Session()
+vggish_slim.define_vggish_slim()
+vggish_slim.load_vggish_slim_checkpoint(sess, checkpoint_path)
+features_tensor = sess.graph.get_tensor_by_name(vggish_params.INPUT_TENSOR_NAME)
+embedding_tensor = sess.graph.get_tensor_by_name(
+        vggish_params.OUTPUT_TENSOR_NAME
+)
+
+
+def vggish_features(signal):
+    print("np.array(signal).shape", np.array(signal).shape)
+    input_batch = vggish_input.waveform_to_examples(
+            signal, SR_VGG
+    )  # ?x96x64 --> ?x128
+    [features] = sess.run(
+            [embedding_tensor], feed_dict={features_tensor: input_batch}
+    )
+    features = sta_fun_2(features)
+    print('features', np.array(features).shape)
+    return features
 
 
 def mfcc_features(audio, sampling_rate, normalise=False):
@@ -381,9 +466,12 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
                     features = chunk
                 elif method == 'brown':
                     features = brown_data_features(chunk, sampling_rate)
+                elif method == 'vggish':
+                    features = vggish_features(chunk)
                 else:
                     raise Exception(
-                            'Specify a method to use for pre processing raw audio signal. Available options - {fbank, mfcc, gaf, raw}')
+                            'Specify a method to use for pre processing raw audio signal. '
+                            'Available options - {fbank, mfcc, gaf, raw, brown, vggish}')
                 data[audio_file.split('/')[-1]].append(features)
         pickle.dump(dict(data), open(filepath + '/' + method + '.pkl', 'wb'))
     else:
