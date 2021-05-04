@@ -39,7 +39,7 @@ tf.compat.v1.disable_v2_behavior()
 
 import sys
 
-sys.path.append('../vggish')
+sys.path.append(os.getcwd() + '/vggish')
 
 from covid_19.utils.file_utils import delete_file
 import json
@@ -52,7 +52,6 @@ SR_VGG = 16000
 
 
 # Vggish
-
 def download(url, dst_dir):
     """Download file.
     If the file not exist then download it.
@@ -96,11 +95,11 @@ def sta_fun_2(npdata):  # 1D np array
 
 print("\nTesting your install of VGGish\n")
 # Paths to downloaded VGGish files.
-checkpoint_path = "vggish/vggish_model.ckpt"
+checkpoint_path = os.getcwd() + "/vggish/vggish_model.ckpt"
 
 if not os.path.exists(checkpoint_path):  # automatically download the checkpoint if not exist.
     url = 'https://storage.googleapis.com/audioset/vggish_model.ckpt'
-    download(url, 'vggish/')
+    download(url, os.getcwd() + '/vggish')
 
 sess = tf.compat.v1.Session()
 vggish_slim.define_vggish_slim()
@@ -111,8 +110,12 @@ embedding_tensor = sess.graph.get_tensor_by_name(
 )
 
 
+def tensorflow_close():
+    if sess is not None:
+        sess.close()
+
+
 def vggish_features(signal):
-    print("np.array(signal).shape", np.array(signal).shape)
     input_batch = vggish_input.waveform_to_examples(
             signal, SR_VGG
     )  # ?x96x64 --> ?x128
@@ -120,7 +123,6 @@ def vggish_features(signal):
             [embedding_tensor], feed_dict={features_tensor: input_batch}
     )
     features = sta_fun_2(features)
-    print('features', np.array(features).shape)
     return features
 
 
@@ -478,13 +480,50 @@ def read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds,
         print('File not found ', filepath)
 
 
+def read_audio_n_generate_vggish(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method):
+    """
+    This method is called by the preprocess data method
+    :param file:
+    :param base_path:
+    :param sampling_rate:
+    :param sample_size_in_seconds:
+    :param overlap:
+    :param normalise:
+    :return:
+    """
+    data = defaultdict(list)
+    filepath = base_path + file
+    if os.path.exists(filepath):
+        filenames = glob.glob(filepath + '/*.wav')
+        for audio_file in filenames:
+            try:
+                audio, _ = librosa.load(audio_file, sr=sampling_rate)
+            except Exception as e:
+                print(e)
+                continue
+            if librosa.get_duration(audio, sr=sampling_rate) < 2:
+                continue
+            chunks = cut_audio(audio, sampling_rate=sampling_rate,
+                               sample_size_in_seconds=sample_size_in_seconds,
+                               overlap=overlap)
+            chunks = np.array(chunks)
+            features = vggish_features(chunks)
+            data[audio_file.split('/')[-1]].append(features)
+        pickle.dump(dict(data), open(filepath + '/' + method + '.pkl', 'wb'))
+    else:
+        print('File not found ', filepath)
+
+
 def preprocess_data(base_path, files, normalise, sample_size_in_seconds, sampling_rate, overlap, method):
-    Parallel(n_jobs=os.cpu_count(), backend='multiprocessing')(
-            delayed(read_audio_n_process)(file, base_path, sampling_rate, sample_size_in_seconds, overlap,
-                                          normalise, method) for file in
-            tqdm(files, total=len(files)))
-    # for file in files:
-    #     read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
+    # Parallel(n_jobs=os.cpu_count(), backend='multiprocessing')(
+    #         delayed(read_audio_n_process)(file, base_path, sampling_rate, sample_size_in_seconds, overlap,
+    #                                       normalise, method) for file in
+    #         tqdm(files, total=len(files)))
+    for e, file in tqdm(enumerate(files), total=len(files)):
+        print('Processing ', e, '/', len(files))
+        read_audio_n_process(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
+    # read_audio_n_generate_vggish(file, base_path, sampling_rate, sample_size_in_seconds, overlap, normalise, method)
+    tensorflow_close()
 
     # for per_file_data in aggregated_data:
     #     # per_file_data[1] are labels for the audio file.

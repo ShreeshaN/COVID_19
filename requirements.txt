@@ -16,3 +16,4 @@ pyannote.audio
 pyts
 pysptk
 tf-slim
+tensorflow==2.2.1
