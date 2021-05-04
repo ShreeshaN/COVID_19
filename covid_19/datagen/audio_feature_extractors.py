@@ -34,15 +34,13 @@ from covid_19.datagen.vggish import vggish_input
 from covid_19.datagen.vggish import vggish_params
 from covid_19.datagen.vggish import vggish_slim
 import tensorflow as tf
-
-tf.compat.v1.disable_v2_behavior()
-
 import sys
-
-sys.path.append(os.getcwd() + '/vggish')
-
+import pathlib
 from covid_19.utils.file_utils import delete_file
 import json
+
+sys.path.append(str(pathlib.Path(__file__).parent.absolute()) + '/vggish')
+tf.compat.v1.disable_v2_behavior()
 
 SR = 22050
 FRAME_LEN = int(SR / 10)  # 100 ms
@@ -95,11 +93,11 @@ def sta_fun_2(npdata):  # 1D np array
 
 print("\nTesting your install of VGGish\n")
 # Paths to downloaded VGGish files.
-checkpoint_path = os.getcwd() + "/vggish/vggish_model.ckpt"
+checkpoint_path = str(pathlib.Path(__file__).parent.absolute()) + "/vggish/vggish_model.ckpt"
 
 if not os.path.exists(checkpoint_path):  # automatically download the checkpoint if not exist.
     url = 'https://storage.googleapis.com/audioset/vggish_model.ckpt'
-    download(url, os.getcwd() + '/vggish')
+    download(url, str(pathlib.Path(__file__).parent.absolute()) + '/vggish')
 
 sess = tf.compat.v1.Session()
 vggish_slim.define_vggish_slim()
