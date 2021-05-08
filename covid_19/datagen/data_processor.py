@@ -77,7 +77,7 @@ class DataProcessor:
                         self.sample_size_in_seconds, self.sampling_rate, self.overlap, self.data_processing_method)
 
     def run(self):
-        for processor_ in [self.mit_processor, self.coswara_processor]:
+        for processor_ in [self.coswara_processor]:
             print('Processing ', processor_)
             processor_()
 

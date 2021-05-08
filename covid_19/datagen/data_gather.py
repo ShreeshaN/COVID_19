@@ -65,7 +65,7 @@ class DataGather:
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
                     continue
-            pickle.dump(data_structure, open(self.mit_audiopath + '/' + save_name, 'wb'))
+            pickle.dump(data_structure, open(self.mit_audiopath + '/browns_experiment/' + save_name, 'wb'))
 
         for variation in tqdm(self.mit_variations, total=len(self.mit_variations)):
             print('**************************** Starting', variation, '****************************')
@@ -101,7 +101,7 @@ class DataGather:
                 else:
                     print('Variation ', audio_variation, 'not present in ', folder_name, '-', e)
                     continue
-            pickle.dump(data_structure, open(self.coswara_datapath + '/' + save_name, 'wb'))
+            pickle.dump(data_structure, open(self.coswara_datapath + '/browns_experiment/' + save_name, 'wb'))
 
         wav_folders = []
         folders_with_date = glob.glob(self.coswara_datapath + '/*')
@@ -132,9 +132,9 @@ class DataGather:
         pass
 
     def gather(self):
-        # self.mit_datagather()
-
-        self.coswara_datagather()
+        for processor_ in [self.mit_datagather, self.coswara_datagather]:
+            print('Processing ', processor_)
+            processor_()
 
     def run(self):
         self.gather()
