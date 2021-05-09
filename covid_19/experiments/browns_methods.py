@@ -28,8 +28,8 @@ train_vggish, test_vggish = pk.load(open(base_path + '/coswara_train_data_vggish
 
 train_brown_data, train_brown_labels = train_browns[0], train_browns[1]
 test_brown_data, test_brown_labels = test_browns[0], test_browns[1]
-train_vggish_data, train_vggish_labels = train_vggish[0], train_vggish[1]
-test_vggish_data, test_vggish_labels = test_vggish[0], test_vggish[1]
+train_vggish_data, train_vggish_labels = np.squeeze(train_vggish[0], axis=1), train_vggish[1]
+test_vggish_data, test_vggish_labels = np.squeeze(test_vggish[0], axis=1), test_vggish[1]
 
 train_data = np.concatenate((train_brown_data, train_vggish), axis=1)
 test_data = np.concatenate((test_brown_data, test_vggish), axis=1)
