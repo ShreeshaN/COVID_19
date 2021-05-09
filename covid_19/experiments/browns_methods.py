@@ -34,6 +34,11 @@ test_vggish_data, test_vggish_labels = np.squeeze(test_vggish[0], axis=1), test_
 train_data = np.concatenate((train_brown_data, train_vggish_data), axis=1)
 test_data = np.concatenate((test_brown_data, test_vggish_data), axis=1)
 
-pca = PCA(n_components=100)
-pca_train_data = pca.fit_transform(train_data)
-print(pca.explained_variance_ratio_)
+for components in [10, 30, 50, 70, 90, 100]:
+    print('Components ', components)
+    pca = PCA(n_components=100)
+    pca_train_data = pca.fit_transform(train_data)
+    for component in range(1, 11):
+        print('Variance explained by', component, sum(pca.explained_variance_ratio_[:component]))
+    print('********************************************************************************')
+    print('********************************************************************************')
