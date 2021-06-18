@@ -19,7 +19,7 @@ This work is part of a Masters Thesis submitted in partial fulfillment for the d
 
 
 ## **Dataset**
-We work on audio samples collected from [voca.ai](voca.ai) and [Coswara](https://github.com/iiscleap/Coswara-Data). Audio samples from both the datasets for combined and a 80-20 train-test stratified split is created. Below is the number of samples in each dataset.
+We work on audio samples collected from [voca.ai](https://voca.ai/corona-virus/) and [Coswara](https://github.com/iiscleap/Coswara-Data). Audio samples from both the datasets for combined and a 80-20 train-test stratified split is created. Below is the number of samples in each dataset.
 
 |                                        | **Dataset**    | **Voca.ai**  | **Coswara**  |
 | :------------------------------------: | :------------- | :------- | :----------- |
